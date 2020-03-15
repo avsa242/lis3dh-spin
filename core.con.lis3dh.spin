@@ -1,0 +1,81 @@
+{
+    --------------------------------------------
+    Filename: core.con.lis3dh.spin
+    Author: Jesse Burt
+    Description: Low-level constants
+    Copyright (c) 2020
+    Started Mar 15, 2020
+    Updated Mar 15, 2020
+    See end of file for terms of use.
+    --------------------------------------------
+}
+
+CON
+
+' I2C Configuration
+    I2C_MAX_FREQ                = 400_000
+
+' SPI Configuration
+    CPOL                        = 0
+    MOSI_BITORDER               = 5             ' MSBFIRST
+    MISO_BITORDER               = 0             ' MSBPRE
+    SCK_DELAY                   = 1             ' P1/SPIN1
+    SCK_MAX_FREQ                = 1_000_000     ' P2/SPIN2
+
+    W                           = 0
+    R                           = 1 << 7
+    MS                          = 1 << 6
+
+    TPOR                        = 5             ' ms
+
+' Register definitions
+    STATUS_REG_AUX              = $07
+    OUT_ADC1_L                  = $08
+    OUT_ADC1_H                  = $09
+    OUT_ADC2_L                  = $0A
+    OUT_ADC2_H                  = $0B
+    OUT_ADC3_L                  = $0C
+    OUT_ADC3_H                  = $0D
+
+    WHO_AM_I                    = $0F
+    WHO_AM_I_RESP               = $33
+
+    CTRL_REG0                   = $1E
+    TEMP_CFG_REG                = $1F
+    CTRL_REG1                   = $20
+    CTRL_REG2                   = $21
+    CTRL_REG3                   = $22
+    CTRL_REG4                   = $23
+    CTRL_REG5                   = $24
+    CTRL_REG6                   = $25
+    REFERENCE                   = $26
+    STATUS_REG                  = $27
+    OUT_X_L                     = $28
+    OUT_X_H                     = $29
+    OUT_Y_L                     = $2A
+    OUT_Y_H                     = $2B
+    OUT_Z_L                     = $2C
+    OUT_Z_H                     = $2D
+    FIFO_CTRL_REG               = $2E
+    FIFO_SRC_REG                = $2F
+    INT1_CFG                    = $30
+    INT1_SRC                    = $31
+    INT1_THS                    = $32
+    INT1_DURATION               = $33
+    INT2_CFG                    = $34
+    INT2_SRC                    = $35
+    INT2_THS                    = $36
+    INT2_DURATION               = $37
+    CLICK_CFG                   = $38
+    CLICK_SRC                   = $39
+    CLICK_THS                   = $3A
+    TIME_LIMIT                  = $3B
+    TIME_LATENCY                = $3C
+    TIME_WINDOW                 = $3D
+    ACT_THS                     = $3E
+    ACT_DUR                     = $3F
+
+
+
+PUB Null
+' This is not a top-level object
