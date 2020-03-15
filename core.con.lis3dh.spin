@@ -42,7 +42,18 @@ CON
 
     CTRL_REG0                   = $1E
     TEMP_CFG_REG                = $1F
+
     CTRL_REG1                   = $20
+    CTRL_REG1_MASK              = $FF
+        FLD_ODR                 = 4
+        FLD_LPEN                = 3
+        FLD_XYZEN               = 0
+        BITS_ODR                = %1111
+        BITS_XYZEN              = %111
+        MASK_ODR                = CTRL_REG1_MASK ^ (BITS_ODR << FLD_ODR)
+        MASK_LPEN               = CTRL_REG1_MASK ^ (1 << FLD_LPEN)
+        MASK_XYZEN              = CTRL_REG1_MASK ^ (BITS_XYZEN << FLD_XYZEN)
+
     CTRL_REG2                   = $21
     CTRL_REG3                   = $22
     CTRL_REG4                   = $23

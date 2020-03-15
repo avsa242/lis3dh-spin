@@ -33,18 +33,74 @@ OBJ
     ser     : "com.serial.terminal.ansi"
     time    : "time"
     io      : "io"
-    lis3dh  : "sensor.accel.3dof.lis3dh.spi"
+    int     : "string.integer"
+    accel   : "sensor.accel.3dof.lis3dh.spi"
 
 VAR
 
+    long _overruns
     byte _ser_cog
 
-PUB Main
+PUB Main | dispmode
 
     Setup
-    ser.position(0, 3)
-    ser.hex(lis3dh.deviceid, 8)
-    flashled(led, 100)
+
+    accel.AccelDataRate(100)
+
+    repeat
+        case ser.RxCheck
+            "q", "Q":
+                ser.Position(0, 12)
+                ser.str(string("Halting"))
+                accel.Stop
+                time.MSleep(5)
+                ser.Stop
+                quit
+'            "c", "C":
+'                Calibrate
+            "r", "R":
+                ser.Position(0, 10)
+                repeat 2
+                    ser.ClearLine(ser#CLR_CUR_TO_END)
+                    ser.Newline
+                dispmode ^= 1
+
+        ser.Position (0, 10)
+        case dispmode
+            0: AccelRaw
+'            1: AccelCalc
+
+    ser.ShowCursor
+    FlashLED(LED, 100)
+{
+PUB AccelCalc | ax, ay, az
+
+    repeat until accel.AccelDataReady
+    accel.AccelG (@ax, @ay, @az)
+    if accel.AccelDataOverrun
+        _overruns++
+    ser.Str (string("Accel micro-g: "))
+    ser.Str (int.DecPadded (ax, 10))
+    ser.Str (int.DecPadded (ay, 10))
+    ser.Str (int.DecPadded (az, 10))
+    ser.Newline
+    ser.Str (string("Overruns: "))
+    ser.Dec (_overruns)
+}
+PUB AccelRaw | ax, ay, az
+
+'    repeat until accel.AccelDataReady
+    accel.AccelData (@ax, @ay, @az)
+'    if accel.AccelDataOverrun
+'        _overruns++
+    ser.Str (string("Raw Accel: "))
+    ser.Str (int.DecPadded (ax, 7))
+    ser.Str (int.DecPadded (ay, 7))
+    ser.Str (int.DecPadded (az, 7))
+
+    ser.Newline
+    ser.Str (string("Overruns: "))
+    ser.Dec (_overruns)
 
 PUB Setup
 
@@ -52,11 +108,11 @@ PUB Setup
     time.MSleep(30)
     ser.Clear
     ser.Str(string("Serial terminal started", ser#CR, ser#LF))
-    if lis3dh.Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY)
+    if accel.Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY)
         ser.str(string("LIS3DH driver started", ser#CR, ser#LF))
     else
         ser.str(string("LIS3DH driver failed to start - halting", ser#CR, ser#LF))
-        lis3dh.Stop
+        accel.Stop
         time.MSleep(5)
         ser.Stop
         FlashLED(LED, 500)

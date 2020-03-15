@@ -72,11 +72,11 @@ PUB AccelADCRes(bits) | tmp
     tmp &= core#MASK_
     tmp := (tmp | bits) & core#_MASK
     writeReg(core#REG, 1, @tmp)
-
+}
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
     bytefill(@tmp, $00, 8)
-    readReg(core#XYZREG, 6, @tmp)
+    readReg(core#OUT_X_L, 6, @tmp)
 
     long[ptr_x] := tmp.word[0]
     long[ptr_y] := tmp.word[1]
@@ -88,29 +88,32 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
         long[ptr_y] := long[ptr_y]-65536
     if long[ptr_z] > 32767
         long[ptr_z] := long[ptr_z]-65536
-
+{
 PUB AccelDataOverrun
 ' Indicates previously acquired data has been overwritten
 '   Returns: TRUE (-1) if data has overflowed/been overwritten, FALSE otherwise
     result := $00
     readReg(core#OVR_REG, 1, @result)
     result := (result & %1) * TRUE
-
+}
 PUB AccelDataRate(Hz) | tmp
 ' Set accelerometer output data rate, in Hz
 '   Valid values: See case table below
 '   Any other value polls the chip and returns the current setting
     tmp := $00
-    readReg(core#RATE_REG, 1, @tmp)
+    readReg(core#CTRL_REG1, 1, @tmp)
     case Hz
-        min..max:
+        0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600:
+            Hz := lookdownz(Hz: 0..1600) << core#FLD_ODR
         OTHER:
-            return tmp
+            tmp := (tmp >> core#FLD_ODR) & core#BITS_ODR
+            result := lookupz(tmp: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600)
+            return
 
-    tmp &= core#MASK_
-    tmp := (tmp | Hz) & core#_MASK
-    writeReg(core#RATE_REG, 1, @tmp)
-
+    tmp &= core#MASK_ODR
+    tmp := (tmp | Hz) & core#CTRL_REG1_MASK
+    writeReg(core#CTRL_REG1, 1, @tmp)
+{
 PUB AccelDataReady
 ' Indicates data is ready
 '   Returns: TRUE (-1) if data ready, FALSE otherwise
@@ -217,8 +220,9 @@ PUB OpMode(mode) | tmp
 PRI readReg(reg, nr_bytes, buff_addr) | tmp
 ' Read nr_bytes from register 'reg' to address 'buff_addr'
     case reg
-'        $07..$0D, $0F, $1E..$3F:
-        $0F:
+        $07..$0D, $0F, $1E..$27, $2E..$3F:
+        $28..$2D:
+            reg |= core#MS
         OTHER:
             return FALSE
 
