@@ -58,6 +58,8 @@ PUB Defaults
 ' Factory defaults
     AccelScale(2)
     AccelDataRate(0)
+    AccelAxisEnabled(%111)
+
 {
 PUB AccelADCRes(bits) | tmp
 ' Set accelerometer ADC resolution, in bits
@@ -75,6 +77,23 @@ PUB AccelADCRes(bits) | tmp
     tmp := (tmp | bits) & core#_MASK
     writeReg(core#REG, 1, @tmp)
 }
+PUB AccelAxisEnabled(xyz_mask) | tmp
+' Enable data output for Accelerometer - per axis
+'   Valid values: 0 or 1, for each axis:
+'       Bits    210
+'               XYZ
+'   Any other value polls the chip and returns the current setting
+    readReg(core#CTRL_REG1, 1, @tmp)
+    case xyz_mask
+        %000..%111:
+            xyz_mask := (xyz_mask >< 3) & core#BITS_XYZEN
+        OTHER:
+            return tmp & core#BITS_XYZEN
+
+    tmp &= core#MASK_XYZEN
+    tmp := (tmp | xyz_mask) & core#CTRL_REG1_MASK
+    writeReg(core#CTRL_REG1, 1, @tmp)
+
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
     bytefill(@tmp, $00, 8)

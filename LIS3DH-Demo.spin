@@ -48,6 +48,7 @@ PUB Main | dispmode
 '    accel.AccelADCRes(accel#FULL)                           ' 10, accel#FULL (dynamic, based on AccelScale)
     accel.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
     accel.AccelDataRate(100)                                ' 0_10, 0_20, 0_39, 0_78, 1_56, 3_13, 6_25, 12_5,
+    accel.AccelAxisEnabled(%111)
 '                                                               25, 50, 100, 200, 400, 800, 1600, 3200
 '    accel.FIFOMode(accel#BYPASS)                            ' accel#BYPASS, accel#FIFO, accel#STREAM, accel#TRIGGER
 '    accel.OpMode(accel#MEASURE)                             ' accel#STANDBY, accel#MEASURE
