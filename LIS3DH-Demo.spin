@@ -45,7 +45,36 @@ PUB Main | dispmode
 
     Setup
 
-    accel.AccelDataRate(100)
+'    accel.AccelADCRes(accel#FULL)                           ' 10, accel#FULL (dynamic, based on AccelScale)
+    accel.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
+    accel.AccelDataRate(100)                                ' 0_10, 0_20, 0_39, 0_78, 1_56, 3_13, 6_25, 12_5,
+'                                                               25, 50, 100, 200, 400, 800, 1600, 3200
+'    accel.FIFOMode(accel#BYPASS)                            ' accel#BYPASS, accel#FIFO, accel#STREAM, accel#TRIGGER
+'    accel.OpMode(accel#MEASURE)                             ' accel#STANDBY, accel#MEASURE
+'    accel.IntMask(%0000_0000)                               ' 0, 1 each bit
+'    accel.AccelSelfTest(FALSE)                              ' FALSE, TRUE
+    ser.HideCursor
+    dispmode := 0
+
+    ser.position(0, 3)
+    ser.str(string("AccelScale: "))
+    ser.dec(accel.AccelScale(-2))
+    ser.newline
+'    ser.str(string("AccelADCRes: "))
+'    ser.dec(accel.AccelADCRes(-2))
+'    ser.newline
+    ser.str(string("AccelDataRate: "))
+    ser.dec(accel.AccelDataRate(-2))
+    ser.newline
+'    ser.str(string("FIFOMode: "))
+'    ser.dec(accel.FIFOMode(-2))
+'    ser.newline
+'    ser.str(string("IntMask: "))
+'    ser.bin(accel.IntMask(-2), 8)
+'    ser.newline
+'    ser.str(string("AccelSelfTest: "))
+'    ser.dec(accel.AccelSelfTest(-2))
+'    ser.newline
 
     repeat
         case ser.RxCheck
@@ -68,17 +97,17 @@ PUB Main | dispmode
         ser.Position (0, 10)
         case dispmode
             0: AccelRaw
-'            1: AccelCalc
+            1: AccelCalc
 
     ser.ShowCursor
     FlashLED(LED, 100)
-{
+
 PUB AccelCalc | ax, ay, az
 
-    repeat until accel.AccelDataReady
+'    repeat until accel.AccelDataReady
     accel.AccelG (@ax, @ay, @az)
-    if accel.AccelDataOverrun
-        _overruns++
+'    if accel.AccelDataOverrun
+'        _overruns++
     ser.Str (string("Accel micro-g: "))
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
@@ -86,7 +115,7 @@ PUB AccelCalc | ax, ay, az
     ser.Newline
     ser.Str (string("Overruns: "))
     ser.Dec (_overruns)
-}
+
 PUB AccelRaw | ax, ay, az
 
 '    repeat until accel.AccelDataReady

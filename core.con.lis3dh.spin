@@ -16,11 +16,11 @@ CON
     I2C_MAX_FREQ                = 400_000
 
 ' SPI Configuration
-    CPOL                        = 0
+    CPOL                        = 0             ' Datasheet diagrams imply it's 1, but it doesn't work
     MOSI_BITORDER               = 5             ' MSBFIRST
     MISO_BITORDER               = 0             ' MSBPRE
     SCK_DELAY                   = 1             ' P1/SPIN1
-    SCK_MAX_FREQ                = 1_000_000     ' P2/SPIN2
+    SCK_MAX_FREQ                = 10_000_000    ' P2/SPIN2
 
     W                           = 0
     R                           = 1 << 7
@@ -56,7 +56,24 @@ CON
 
     CTRL_REG2                   = $21
     CTRL_REG3                   = $22
+
     CTRL_REG4                   = $23
+    CTRL_REG4_MASK              = $FF
+        FLD_BDU                 = 7
+        FLD_BLE                 = 6
+        FLD_FS                  = 4
+        FLD_HR                  = 3
+        FLD_ST                  = 1
+        FLD_SIM                 = 0
+        BITS_FS                 = %11
+        BITS_ST                 = %11
+        MASK_BDU                = CTRL_REG4_MASK ^ (1 << FLD_BDU)
+        MASK_BLE                = CTRL_REG4_MASK ^ (1 << FLD_BLE)
+        MASK_FS                 = CTRL_REG4_MASK ^ (BITS_FS << FLD_FS)
+        MASK_HR                 = CTRL_REG4_MASK ^ (1 << FLD_HR)
+        MASK_ST                 = CTRL_REG4_MASK ^ (BITS_ST << FLD_ST)
+        MASK_SIM                = CTRL_REG4_MASK ^ (1 << FLD_SIM)
+
     CTRL_REG5                   = $24
     CTRL_REG6                   = $25
     REFERENCE                   = $26

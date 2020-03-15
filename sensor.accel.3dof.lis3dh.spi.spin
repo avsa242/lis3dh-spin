@@ -56,6 +56,8 @@ PUB Stop
 
 PUB Defaults
 ' Factory defaults
+    AccelScale(2)
+    AccelDataRate(0)
 {
 PUB AccelADCRes(bits) | tmp
 ' Set accelerometer ADC resolution, in bits
@@ -100,11 +102,12 @@ PUB AccelDataRate(Hz) | tmp
 ' Set accelerometer output data rate, in Hz
 '   Valid values: See case table below
 '   Any other value polls the chip and returns the current setting
+'   NOTE: A value of 0 powers down the device
     tmp := $00
     readReg(core#CTRL_REG1, 1, @tmp)
     case Hz
         0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600:
-            Hz := lookdownz(Hz: 0..1600) << core#FLD_ODR
+            Hz := lookdownz(Hz: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600) << core#FLD_ODR
         OTHER:
             tmp := (tmp >> core#FLD_ODR) & core#BITS_ODR
             result := lookupz(tmp: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600)
@@ -120,7 +123,7 @@ PUB AccelDataReady
     result := $00
     readReg(core#DRDY_REG, 1, @result)
     result := ((result >> core#FLD_) & %1) * TRUE
-
+}
 PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpX, tmpY, tmpZ
 ' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)
     AccelData(@tmpX, @tmpY, @tmpZ)
@@ -130,23 +133,23 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpX, tmpY, tmpZ
 
 PUB AccelScale(g) | tmp
 ' Set measurement range of the accelerometer, in g's
-'   Valid values:
+'   Valid values: 2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
     tmp := $00
-    readReg(core#SCALE_REG, 1, @tmp)
+    readReg(core#CTRL_REG4, 1, @tmp)
     case g
-        min..max:
-            g := lookdownz(g: min, max)
-            _aRes := lookup(g: scale1, scale2)    '   it depends on the range
-            g <<= core#FLD_
+        2, 4, 8, 16:
+            g := lookdownz(g: 2, 4, 8, 16)
+            _aRes := lookupz(g: 61, 122, 244, 732)
+            g <<= core#FLD_FS
         OTHER:
-            tmp &= core#BITS_
-            return tmp
+            tmp := (tmp >> core#FLD_FS) & core#BITS_FS
+            return lookupz(tmp: 2, 4, 8, 16)
 
-    tmp &= core#MASK_
-    tmp := (tmp | g)
-    writeReg(core#SCALE_REG, 1, @tmp)
-
+    tmp &= core#MASK_FS
+    tmp := (tmp | g) & core#CTRL_REG4_MASK
+    writeReg(core#CTRL_REG4, 1, @tmp)
+{
 PUB AccelSelfTest(enabled) | tmp
 ' Enable self-test mode
 '   Valid values: TRUE (-1 or 1), FALSE (0)
