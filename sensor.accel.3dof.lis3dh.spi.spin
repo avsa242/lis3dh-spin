@@ -60,23 +60,39 @@ PUB Defaults
     AccelDataRate(0)
     AccelAxisEnabled(%111)
 
-{
-PUB AccelADCRes(bits) | tmp
+
+PUB AccelADCRes(bits) | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
 '   Valid values:
-'
+'       8:  8-bit data output, Low-power mode
+'       10: 10-bit data output, Normal mode
+'       12: 12-bit data output, High-resolution mode
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(core#REG, 1, @tmp)
+    tmp1 := tmp2 := $00
+    readReg(core#CTRL_REG1, 1, @tmp1)
+    readReg(core#CTRL_REG4, 1, @tmp2)
     case bits
-        min..max:
+        8:
+            tmp1 &= core#MASK_LPEN
+            tmp2 &= core#MASK_HR
+            tmp1 := (tmp1 | (1 << core#FLD_LPEN))
+        10:
+            tmp1 &= core#MASK_LPEN
+            tmp2 &= core#MASK_HR
+        12:
+            tmp1 &= core#MASK_LPEN
+            tmp2 &= core#MASK_HR
+            tmp2 := (tmp2 | (1 << core#FLD_HR))
         OTHER:
-            return tmp
+            tmp1 := (tmp1 >> core#FLD_LPEN) & %1
+            tmp2 := (tmp2 >> core#FLD_HR) & %1
+            tmp1 := (tmp1 << 1) | tmp2
+            result := lookupz(tmp1: 10, 12, 8)
+            return
 
-    tmp &= core#MASK_
-    tmp := (tmp | bits) & core#_MASK
-    writeReg(core#REG, 1, @tmp)
-}
+    writeReg(core#CTRL_REG1, 1, @tmp1)
+    writeReg(core#CTRL_REG4, 1, @tmp2)
+
 PUB AccelAxisEnabled(xyz_mask) | tmp
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:

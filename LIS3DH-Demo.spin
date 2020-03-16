@@ -45,11 +45,10 @@ PUB Main | dispmode
 
     Setup
 
-'    accel.AccelADCRes(accel#FULL)                           ' 10, accel#FULL (dynamic, based on AccelScale)
+    accel.AccelADCRes(12)                                   ' 8, 10, 12 (low-power, normal, high-res, resp.)
     accel.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
-    accel.AccelDataRate(100)                                ' 0_10, 0_20, 0_39, 0_78, 1_56, 3_13, 6_25, 12_5,
-    accel.AccelAxisEnabled(%111)
-'                                                               25, 50, 100, 200, 400, 800, 1600, 3200
+    accel.AccelDataRate(100)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
+    accel.AccelAxisEnabled(%111)                            ' 0 or 1 for each bit (%xyz)
 '    accel.FIFOMode(accel#BYPASS)                            ' accel#BYPASS, accel#FIFO, accel#STREAM, accel#TRIGGER
 '    accel.OpMode(accel#MEASURE)                             ' accel#STANDBY, accel#MEASURE
 '    accel.IntMask(%0000_0000)                               ' 0, 1 each bit
@@ -61,9 +60,9 @@ PUB Main | dispmode
     ser.str(string("AccelScale: "))
     ser.dec(accel.AccelScale(-2))
     ser.newline
-'    ser.str(string("AccelADCRes: "))
-'    ser.dec(accel.AccelADCRes(-2))
-'    ser.newline
+    ser.str(string("AccelADCRes: "))
+    ser.dec(accel.AccelADCRes(-2))
+    ser.newline
     ser.str(string("AccelDataRate: "))
     ser.dec(accel.AccelDataRate(-2))
     ser.newline
