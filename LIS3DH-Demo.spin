@@ -49,45 +49,45 @@ PUB Main | dispmode
     accel.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
     accel.AccelDataRate(100)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
     accel.AccelAxisEnabled(%111)                            ' 0 or 1 for each bit (%xyz)
-'    accel.FIFOMode(accel#BYPASS)                            ' accel#BYPASS, accel#FIFO, accel#STREAM, accel#TRIGGER
-'    accel.OpMode(accel#MEASURE)                             ' accel#STANDBY, accel#MEASURE
-'    accel.IntMask(%0000_0000)                               ' 0, 1 each bit
-'    accel.AccelSelfTest(FALSE)                              ' FALSE, TRUE
+    accel.FIFOMode(accel#BYPASS)                            ' accel#BYPASS, accel#FIFO, accel#STREAM, accel#TRIGGER
+    accel.IntThresh(1_000000)                               ' 0..16_000000 (ug's, i.e., 0..16g)
+    accel.IntMask(%100000)                                  ' Bits 5..0: Zhigh event | Zlow event | Yh|Yl|Xh|Xl
+
     ser.HideCursor
     dispmode := 0
 
-    ser.position(0, 3)
-    ser.str(string("AccelScale: "))
-    ser.dec(accel.AccelScale(-2))
-    ser.newline
-    ser.str(string("AccelADCRes: "))
-    ser.dec(accel.AccelADCRes(-2))
-    ser.newline
-    ser.str(string("AccelDataRate: "))
-    ser.dec(accel.AccelDataRate(-2))
-    ser.newline
-'    ser.str(string("FIFOMode: "))
-'    ser.dec(accel.FIFOMode(-2))
-'    ser.newline
-'    ser.str(string("IntMask: "))
-'    ser.bin(accel.IntMask(-2), 8)
-'    ser.newline
-'    ser.str(string("AccelSelfTest: "))
-'    ser.dec(accel.AccelSelfTest(-2))
-'    ser.newline
+    ser.position(0, 3)                                      ' Read back the settings from above
+    ser.str(string("AccelScale: "))                         '
+    ser.dec(accel.AccelScale(-2))                           '
+    ser.newline                                             '
+    ser.str(string("AccelADCRes: "))                        '
+    ser.dec(accel.AccelADCRes(-2))                          '
+    ser.newline                                             '
+    ser.str(string("AccelDataRate: "))                      '
+    ser.dec(accel.AccelDataRate(-2))                        '
+    ser.newline                                             '
+    ser.str(string("FIFOMode: "))                           '
+    ser.dec(accel.FIFOMode(-2))                             '
+    ser.newline                                             '
+    ser.str(string("IntThresh: "))                          '
+    ser.dec(accel.IntThresh(-2))                            '
+    ser.newline                                             '
+    ser.str(string("IntMask: "))                            '
+    ser.bin(accel.IntMask(-2), 8)                           '
+    ser.newline                                             '
 
     repeat
         case ser.RxCheck
-            "q", "Q":
-                ser.Position(0, 12)
+            "q", "Q":                                       ' Quit the demo
+                ser.Position(0, 15)
                 ser.str(string("Halting"))
                 accel.Stop
                 time.MSleep(5)
                 ser.Stop
                 quit
-            "c", "C":
+            "c", "C":                                       ' Perform calibration
                 Calibrate
-            "r", "R":
+            "r", "R":                                       ' Change display mode: raw/calculated
                 ser.Position(0, 10)
                 repeat 2
                     ser.ClearLine(ser#CLR_CUR_TO_END)
@@ -98,6 +98,10 @@ PUB Main | dispmode
         case dispmode
             0: AccelRaw
             1: AccelCalc
+
+        ser.position (0, 12)
+        ser.str(string("Interrupt: "))
+        ser.str(lookupz(accel.Interrupt >> 6: string("No "), string("Yes")))
 
     ser.ShowCursor
     FlashLED(LED, 100)

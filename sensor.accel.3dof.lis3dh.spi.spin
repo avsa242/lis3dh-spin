@@ -316,22 +316,64 @@ PUB FIFOUnreadSamples
     readReg(core#FIFO_SRC_REG, 1, @result)
     result &= core#BITS_FSS
 
-{
+PUB Interrupt
+' Read interrupt state
+'   Bit 6543210 (For each bit, 0: No interrupt, 1: Interrupt has been generated)
+'       6: One or more interrupts have been generated
+'       5: Z-axis high event
+'       4: Z-axis low event
+'       3: Y-axis high event
+'       2: Y-axis low event
+'       1: X-axis high event
+'       0: X-axis low event
+    readReg(core#INT1_SRC, 1, @result)
+
+
 PUB IntMask(mask) | tmp
 ' Set interrupt mask
-'   Bits:   76543210
-'
-'   Valid values: %00000000..%11111111
+'   Bits:   543210
+'       5: Z-axis high event
+'       4: Z-axis low event
+'       3: Y-axis high event
+'       2: Y-axis low event
+'       1: X-axis high event
+'       0: X-axis low event
+'   Valid values: %000000..%111111
 '   Any other value polls the chip and returns the current setting
     tmp := $00
-    readReg(core#INTMASK_REG, 1, @tmp)
+    readReg(core#INT1_CFG, 1, @tmp)
     case mask
-        %0000_0000..%1111_1111:
+        %000000..%111111:
         OTHER:
             return tmp
 
-    writeReg(core#INTMASK_REG, 1, @mask)
+    writeReg(core#INT1_CFG, 1, @mask)
 
+PUB IntThresh(level) | tmp
+' Set interrupt threshold level, in micro-g's
+'   Valid values: 0..16_000000
+    tmp := $00
+    readReg(core#INT1_THS, 1, @tmp)
+    case level
+        0..16_000000:                                       ' 0..16_000000 = 0..16M micro-g's = 0..16 g's
+        OTHER:
+            case AccelScale(-2)                             '
+                2: tmp *= 16_000                            '
+                4: tmp *= 32_000                            '
+                8: tmp *= 62_000                            '
+                16: tmp *= 186_000                          ' Scale threshold register's 7-bit range
+            return tmp                                      '   to micro-g's
+
+    case AccelScale(-2)                                     '
+        2: tmp := 16_000                                    '
+        4: tmp := 32_000                                    '
+        8: tmp := 62_000                                    '
+        16: tmp := 186_000                                  ' Scale micro-g's to threshold register's
+
+    level /= tmp                                            '   7-bit range
+    writeReg(core#INT1_THS, 1, @level)
+
+{
 PUB OpMode(mode) | tmp
 ' Set operating mode
 '   Valid values:

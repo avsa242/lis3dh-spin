@@ -133,7 +133,18 @@ CON
         MASK_FSS                = FIFO_SRC_REG_MASK ^ (BITS_FSS << FLD_FSS)
 
     INT1_CFG                    = $30
+
     INT1_SRC                    = $31
+    INT1_SRC_MASK               = $7F
+        FLD_IA                  = 6
+        FLD_ZH                  = 5
+        FLD_ZL                  = 4
+        FLD_YH                  = 3
+        FLD_YL                  = 2
+        FLD_XH                  = 1
+        FLD_XL                  = 0
+        BITS_XYZ                = %111111
+
     INT1_THS                    = $32
     INT1_DURATION               = $33
     INT2_CFG                    = $34
