@@ -157,14 +157,14 @@ PUB AccelDataRate(Hz) | tmp
     tmp &= core#MASK_ODR
     tmp := (tmp | Hz) & core#CTRL_REG1_MASK
     writeReg(core#CTRL_REG1, 1, @tmp)
-{
+
 PUB AccelDataReady
 ' Indicates data is ready
 '   Returns: TRUE (-1) if data ready, FALSE otherwise
     result := $00
-    readReg(core#DRDY_REG, 1, @result)
-    result := ((result >> core#FLD_) & %1) * TRUE
-}
+    readReg(core#STATUS_REG, 1, @result)
+    result := ((result >> core#FLD_ZYXDA) & %1) * TRUE
+
 PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpX, tmpY, tmpZ
 ' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)
     AccelData(@tmpX, @tmpY, @tmpZ)

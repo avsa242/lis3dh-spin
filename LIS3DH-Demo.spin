@@ -104,7 +104,7 @@ PUB Main | dispmode
 
 PUB AccelCalc | ax, ay, az
 
-'    repeat until accel.AccelDataReady
+    repeat until accel.AccelDataReady
     accel.AccelG (@ax, @ay, @az)
     if accel.AccelDataOverrun
         _overruns++
@@ -118,7 +118,7 @@ PUB AccelCalc | ax, ay, az
 
 PUB AccelRaw | ax, ay, az
 
-'    repeat until accel.AccelDataReady
+    repeat until accel.AccelDataReady
     accel.AccelData (@ax, @ay, @az)
     if accel.AccelDataOverrun
         _overruns++
