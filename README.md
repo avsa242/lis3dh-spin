@@ -5,7 +5,7 @@ This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
 
 ## Salient Features
 
-* SPI connection at up to 1MHz (P1), _TBD_ (P2)
+* SPI connection at up to 1MHz (P1), ~5MHz (P2)
 * Read raw accelerometer data output
 * Set output data rate
 * Set full-scale range
@@ -16,6 +16,7 @@ This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
 ## Requirements
 
 * P1/SPIN1: 1 extra core/cog for the PASM SPI driver
+* P2/SPIN2: N/A
 
 ## Compiler Compatibility
 
@@ -28,7 +29,7 @@ This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
 
 ## TODO
 
-- [ ] Implement P2/SPIN2 driver
+- [x] Implement P2/SPIN2 driver
 - [x] Implement calibration
 - [ ] Add method to perform self-test
 - [ ] Add support for setting interrupt masks and reading flags
