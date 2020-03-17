@@ -77,13 +77,24 @@ CON
     CTRL_REG5                   = $24
     CTRL_REG6                   = $25
     REFERENCE                   = $26
+
     STATUS_REG                  = $27
+        FLD_ZYXOR               = 7
+        FLD_ZOR                 = 6
+        FLD_YOR                 = 5
+        FLD_XOR                 = 4
+        FLD_ZYXDA               = 3
+        FLD_ZDA                 = 2
+        FLD_YDA                 = 1
+        FLD_XDA                 = 0
+
     OUT_X_L                     = $28
     OUT_X_H                     = $29
     OUT_Y_L                     = $2A
     OUT_Y_H                     = $2B
     OUT_Z_L                     = $2C
     OUT_Z_H                     = $2D
+
     FIFO_CTRL_REG               = $2E
     FIFO_SRC_REG                = $2F
     INT1_CFG                    = $30

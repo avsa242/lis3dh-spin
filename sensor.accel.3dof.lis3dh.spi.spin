@@ -125,14 +125,20 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
         long[ptr_y] := long[ptr_y]-65536
     if long[ptr_z] > 32767
         long[ptr_z] := long[ptr_z]-65536
-{
+
 PUB AccelDataOverrun
 ' Indicates previously acquired data has been overwritten
-'   Returns: TRUE (-1) if data has overflowed/been overwritten, FALSE otherwise
+'   Returns:
+'       Bits 3210 (decimal val):
+'           3 (8): X, Y, and Z-axis data overrun
+'           2 (4): Z-axis data overrun
+'           1 (2): Y-axis data overrun
+'           0 (1): X-axis data overrun
+'       Returns 0 otherwise
     result := $00
-    readReg(core#OVR_REG, 1, @result)
-    result := (result & %1) * TRUE
-}
+    readReg(core#STATUS_REG, 1, @result)
+    result := (result >> core#FLD_XOR) & %1111
+
 PUB AccelDataRate(Hz) | tmp
 ' Set accelerometer output data rate, in Hz
 '   Valid values: See case table below

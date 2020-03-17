@@ -45,7 +45,7 @@ PUB Main | dispmode
 
     Setup
 
-    accel.AccelADCRes(12)                                   ' 8, 10, 12 (low-power, normal, high-res, resp.)
+    accel.AccelADCRes(10)                                   ' 8, 10, 12 (low-power, normal, high-res, resp.)
     accel.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
     accel.AccelDataRate(100)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
     accel.AccelAxisEnabled(%111)                            ' 0 or 1 for each bit (%xyz)
@@ -106,8 +106,8 @@ PUB AccelCalc | ax, ay, az
 
 '    repeat until accel.AccelDataReady
     accel.AccelG (@ax, @ay, @az)
-'    if accel.AccelDataOverrun
-'        _overruns++
+    if accel.AccelDataOverrun
+        _overruns++
     ser.Str (string("Accel micro-g: "))
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
@@ -120,8 +120,8 @@ PUB AccelRaw | ax, ay, az
 
 '    repeat until accel.AccelDataReady
     accel.AccelData (@ax, @ay, @az)
-'    if accel.AccelDataOverrun
-'        _overruns++
+    if accel.AccelDataOverrun
+        _overruns++
     ser.Str (string("Raw Accel: "))
     ser.Str (int.DecPadded (ax, 7))
     ser.Str (int.DecPadded (ay, 7))
