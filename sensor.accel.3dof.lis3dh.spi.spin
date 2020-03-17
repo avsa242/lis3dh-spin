@@ -5,19 +5,30 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 15, 2020
+    Updated Mar 16, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
 
 CON
 
+' XYZ axis constants used throughout the driver
+    X_AXIS          = 0
+    Y_AXIS          = 1
+    Z_AXIS          = 2
+
 ' Operating modes
 
+' FIFO modes
+    BYPASS          = %00
+    FIFO            = %01
+    STREAM          = %10
+    STREAM2FIFO     = %11
 
 VAR
 
     long _aRes
+    long _aBias[3], _aBiasRaw[3]
     byte _CS, _MOSI, _MISO, _SCK
 
 OBJ
@@ -38,7 +49,7 @@ PUB Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY): okay
     if lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31)
         if SCL_DELAY => 1
             if okay := spi.start (SCL_DELAY, core#CPOL)         'SPI Object Started?
-                time.MSleep (1)
+                time.MSleep (core#TPOR)
                 _CS := CS_PIN
                 _MOSI := SDA_PIN
                 _MISO := SDO_PIN
@@ -59,7 +70,6 @@ PUB Defaults
     AccelScale(2)
     AccelDataRate(0)
     AccelAxisEnabled(%111)
-
 
 PUB AccelADCRes(bits) | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
@@ -115,16 +125,13 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     bytefill(@tmp, $00, 8)
     readReg(core#OUT_X_L, 6, @tmp)
 
-    long[ptr_x] := tmp.word[0]
-    long[ptr_y] := tmp.word[1]
-    long[ptr_z] := tmp.word[2]
+    long[ptr_x] := ~~tmp.word[0]
+    long[ptr_y] := ~~tmp.word[1]
+    long[ptr_z] := ~~tmp.word[2]
 
-    if long[ptr_x] > 32767
-        long[ptr_x] := long[ptr_x]-65536
-    if long[ptr_y] > 32767
-        long[ptr_y] := long[ptr_y]-65536
-    if long[ptr_z] > 32767
-        long[ptr_z] := long[ptr_z]-65536
+    long[ptr_x] -= _aBiasRaw[X_AXIS]
+    long[ptr_y] -= _aBiasRaw[Y_AXIS]
+    long[ptr_z] -= _aBiasRaw[Z_AXIS]
 
 PUB AccelDataOverrun
 ' Indicates previously acquired data has been overwritten
@@ -207,26 +214,108 @@ PUB AccelSelfTest(enabled) | tmp
     tmp &= core#MASK_
     tmp := (tmp | enabled) & core#ST_REG_MASK
     writeReg(core#ST_REG, 1, @tmp)
+}
 
-
-PUB Calibrate | tmpX, tmpY, tmpZ
+PUB Calibrate | tmpX, tmpY, tmpZ, tmpBiasRaw[3], axis, samples
 ' Calibrate the accelerometer
 '   NOTE: The accelerometer must be oriented with the package top facing up for this method to be successful
-    repeat 3
-        AccelData(@tmpX, @tmpY, @tmpZ)
-        tmpX += 2 * -tmpX
-        tmpY += 2 * -tmpY
-        tmpZ += 2 * -(tmpZ-(_aRes/1000))
+    tmpX := tmpY := tmpZ := axis := samples := 0
+    longfill(@tmpBiasRaw, $00000000, 3)
 
-    writeReg(core#XOFFREG, 2, @tmpX)
-    writeReg(core#YOFFREG, 2, @tmpY)
-    writeReg(core#ZOFFREG, 2, @tmpZ)
-    time.MSleep(200)
-}
+    FIFOEnabled(TRUE)
+    FIFOMode(FIFO)
+    FIFOThreshold (32)
+    samples := FIFOThreshold (-2)
+    repeat until FIFOFull
+
+    repeat samples
+' Read the accel data stored in the FIFO
+        AccelData(@tmpx, @tmpy, @tmpz)
+        tmpBiasRaw[X_AXIS] += tmpx
+        tmpBiasRaw[Y_AXIS] += tmpy
+        tmpBiasRaw[Z_AXIS] += tmpz - (1_000_000 / _aRes) ' Assumes sensor facing up!
+
+    repeat axis from X_AXIS to Z_AXIS
+        _aBiasRaw[axis] := tmpBiasRaw[axis] / samples
+        _aBias[axis] := _aBiasRaw[axis] / _aRes
+
+    FIFOEnabled(FALSE)
+    FIFOMode (BYPASS)
+
 PUB DeviceID
 ' Read device identification
     result := $00
     readReg(core#WHO_AM_I, 1, @result)
+
+PUB FIFOEnabled(enabled) | tmp
+' Enable FIFO memory
+'   Valid values: FALSE (0), TRUE(1 or -1)
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(core#CTRL_REG5, 1, @tmp)
+    case ||enabled
+        0, 1:
+            enabled := (||enabled << core#FLD_FIFO_EN)
+        OTHER:
+            tmp := (tmp >> core#FLD_FIFO_EN) & %1
+            return tmp * TRUE
+
+    tmp &= core#MASK_FIFO_EN
+    tmp := (tmp | enabled) & core#CTRL_REG5_MASK
+    writeReg(core#CTRL_REG5, 1, @tmp)
+
+PUB FIFOEmpty | tmp
+' Flag indicating FIFO is empty
+'   Returns: FALSE (0): FIFO contains at least one sample, TRUE(-1): FIFO is empty
+    readReg(core#FIFO_SRC_REG, 1, @result)
+    result := ((result >> core#FLD_EMPTY) & %1) * TRUE
+
+PUB FIFOFull | tmp
+' Flag indicating FIFO is full
+'   Returns: FALSE (0): FIFO contains less than 32 samples, TRUE(-1): FIFO contains 32 samples
+    readReg(core#FIFO_SRC_REG, 1, @result)
+    result := ((result >> core#FLD_OVRN_FIFO) & %1) * TRUE
+
+PUB FIFOMode(mode) | tmp
+' Set FIFO behavior
+'   Valid values:
+'       BYPASS      (%00) - Bypass mode - FIFO off
+'       FIFO        (%01) - FIFO mode
+'       STREAM      (%10) - Stream mode
+'       STREAM2FIFO (%11) - Stream-to-FIFO mode
+'   Any other value polls the chip and returns the current setting
+    readReg(core#FIFO_CTRL_REG, 1, @tmp)
+    case mode
+        BYPASS, FIFO, STREAM, STREAM2FIFO:
+            mode <<= core#FLD_FM
+        OTHER:
+            return (tmp >> core#FLD_FM) & core#BITS_FM
+
+    tmp &= core#MASK_FM
+    tmp := (tmp | mode) & core#FIFO_CTRL_REG_MASK
+    writeReg(core#FIFO_CTRL_REG, 1, @tmp)
+
+PUB FIFOThreshold(level) | tmp
+' Set FIFO threshold level
+'   Valid values: 1..32
+'   Any other value polls the chip and returns the current setting
+    readReg(core#FIFO_CTRL_REG, 1, @tmp)
+    case level
+        1..32:
+            level -= 1
+        OTHER:
+            return (tmp & core#BITS_FTH) + 1
+
+    tmp &= core#MASK_FTH
+    tmp := (tmp | level) & core#FIFO_CTRL_REG_MASK
+    writeReg(core#FIFO_CTRL_REG, 1, @tmp)
+
+PUB FIFOUnreadSamples
+' Number of unread samples stored in FIFO
+'   Returns: 0..32
+    readReg(core#FIFO_SRC_REG, 1, @result)
+    result &= core#BITS_FSS
+
 {
 PUB IntMask(mask) | tmp
 ' Set interrupt mask

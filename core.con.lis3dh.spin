@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 15, 2020
+    Updated Mar 16, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -75,6 +75,20 @@ CON
         MASK_SIM                = CTRL_REG4_MASK ^ (1 << FLD_SIM)
 
     CTRL_REG5                   = $24
+    CTRL_REG5_MASK              = $CF
+        FLD_BOOT                = 7
+        FLD_FIFO_EN             = 6
+        FLD_LIR_INT1            = 3
+        FLD_D4D_INT1            = 2
+        FLD_LIR_INT2            = 1
+        FLD_D4D_INT2            = 0
+        MASK_BOOT               = CTRL_REG5_MASK ^ (1 << FLD_BOOT)
+        MASK_FIFO_EN            = CTRL_REG5_MASK ^ (1 << FLD_FIFO_EN)
+        MASK_LIR_INT1           = CTRL_REG5_MASK ^ (1 << FLD_LIR_INT1)
+        MASK_D4D_INT1           = CTRL_REG5_MASK ^ (1 << FLD_D4D_INT1)
+        MASK_LIR_INT2           = CTRL_REG5_MASK ^ (1 << FLD_LIR_INT2)
+        MASK_D4D_INT2           = CTRL_REG5_MASK ^ (1 << FLD_D4D_INT2)
+
     CTRL_REG6                   = $25
     REFERENCE                   = $26
 
@@ -96,7 +110,28 @@ CON
     OUT_Z_H                     = $2D
 
     FIFO_CTRL_REG               = $2E
+    FIFO_CTRL_REG_MASK          = $FF
+        FLD_FM                  = 6
+        FLD_TR                  = 5
+        FLD_FTH                 = 0
+        BITS_FM                 = %11
+        BITS_FTH                = %11111
+        MASK_FM                 = FIFO_CTRL_REG_MASK ^ (BITS_FM << FLD_FM)
+        MASK_TR                 = FIFO_CTRL_REG_MASK ^ (1 << FLD_TR)
+        MASK_FTH                = FIFO_CTRL_REG_MASK ^ (BITS_FTH << FLD_FTH)
+
     FIFO_SRC_REG                = $2F
+    FIFO_SRC_REG_MASK           = $FF
+        FLD_WTM                 = 7
+        FLD_OVRN_FIFO           = 6
+        FLD_EMPTY               = 5
+        FLD_FSS                 = 0
+        BITS_FSS                = %11111
+        MASK_WTM                = FIFO_SRC_REG_MASK ^ (1 << FLD_WTM)
+        MASK_OVRN_FIFO          = FIFO_SRC_REG_MASK ^ (1 << FLD_OVRN_FIFO)
+        MASK_EMPTY              = FIFO_SRC_REG_MASK ^ (1 << FLD_EMPTY)
+        MASK_FSS                = FIFO_SRC_REG_MASK ^ (BITS_FSS << FLD_FSS)
+
     INT1_CFG                    = $30
     INT1_SRC                    = $31
     INT1_THS                    = $32
@@ -113,8 +148,6 @@ CON
     TIME_WINDOW                 = $3D
     ACT_THS                     = $3E
     ACT_DUR                     = $3F
-
-
 
 PUB Null
 ' This is not a top-level object

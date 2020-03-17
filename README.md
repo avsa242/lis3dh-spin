@@ -10,6 +10,8 @@ This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
 * Set output data rate
 * Set full-scale range
 * Enable per-axis output
+* Flags to indicate data is ready, or has overrun
+* Set calibration offsets
 
 ## Requirements
 
@@ -23,9 +25,14 @@ This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
 ## Limitations
 
 * Very early in development - may malfunction, or outright fail to build
-* Limitation 2
 
 ## TODO
 
-- [ ] Task item 1
-- [ ] Task item 2
+- [ ] Implement P2/SPIN2 driver
+- [x] Implement calibration
+- [ ] Add method to perform self-test
+- [ ] Add support for setting interrupt masks and reading flags
+- [ ] Add 3-wire SPI driver variant
+- [ ] Add I2C driver variant
+- [ ] Add support for temperature sensor
+- [ ] Add support for auxilliary ADC
