@@ -67,7 +67,7 @@ PUB Defaults
     AccelDataRate(0)
     AccelAxisEnabled(%111)
 
-PUB AccelADCRes(bits) | tmp1, tmp2
+PUB AccelADCRes(bits=-2) | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
 '   Valid values:
 '       8:  8-bit data output, Low-power mode
@@ -99,7 +99,7 @@ PUB AccelADCRes(bits) | tmp1, tmp2
     writeReg(core#CTRL_REG1, 1, @tmp1)
     writeReg(core#CTRL_REG4, 1, @tmp2)
 
-PUB AccelAxisEnabled(xyz_mask) | tmp
+PUB AccelAxisEnabled(xyz_mask=-2) | tmp
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
@@ -142,7 +142,7 @@ PUB AccelDataOverrun
     readReg(core#STATUS_REG, 1, @result)
     result := (result >> core#FLD_XOR) & %1111
 
-PUB AccelDataRate(Hz) | tmp
+PUB AccelDataRate(Hz=-2) | tmp
 ' Set accelerometer output data rate, in Hz
 '   Valid values: See case table below
 '   Any other value polls the chip and returns the current setting
@@ -175,7 +175,7 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpX, tmpY, tmpZ
     long[ptr_y] := tmpY * _aRes
     long[ptr_z] := tmpZ * _aRes
 
-PUB AccelScale(g) | tmp
+PUB AccelScale(g=-2) | tmp
 ' Set measurement range of the accelerometer, in g's
 '   Valid values: 2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
@@ -243,7 +243,7 @@ PUB DeviceID
     result := $00
     readReg(core#WHO_AM_I, 1, @result)
 
-PUB FIFOEnabled(enabled) | tmp
+PUB FIFOEnabled(enabled=-2) | tmp
 ' Enable FIFO memory
 '   Valid values: FALSE (0), TRUE(1 or -1)
 '   Any other value polls the chip and returns the current setting
@@ -272,7 +272,7 @@ PUB FIFOFull | tmp
     readReg(core#FIFO_SRC_REG, 1, @result)
     result := ((result >> core#FLD_OVRN_FIFO) & %1) * TRUE
 
-PUB FIFOMode(mode) | tmp
+PUB FIFOMode(mode=-2) | tmp
 ' Set FIFO behavior
 '   Valid values:
 '       BYPASS      (%00) - Bypass mode - FIFO off
@@ -291,7 +291,7 @@ PUB FIFOMode(mode) | tmp
     tmp := (tmp | mode) & core#FIFO_CTRL_REG_MASK
     writeReg(core#FIFO_CTRL_REG, 1, @tmp)
 
-PUB FIFOThreshold(level) | tmp
+PUB FIFOThreshold(level=-2) | tmp
 ' Set FIFO threshold level
 '   Valid values: 1..32
 '   Any other value polls the chip and returns the current setting

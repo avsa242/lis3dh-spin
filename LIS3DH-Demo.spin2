@@ -55,7 +55,7 @@ PUB Main | dispmode
 
     accel.AccelADCRes(10)                                   ' 8, 10, 12 (low-power, normal, high-res, resp.)
     accel.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
-    accel.AccelDataRate(1600)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
+    accel.AccelDataRate(100)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
     accel.AccelAxisEnabled(%111)                            ' 0 or 1 for each bit (%xyz)
 '    accel.FIFOMode(accel#BYPASS)                            ' accel#BYPASS, accel#FIFO, accel#STREAM, accel#TRIGGER
 '    accel.OpMode(accel#MEASURE)                             ' accel#STANDBY, accel#MEASURE
@@ -65,22 +65,14 @@ PUB Main | dispmode
     dispmode := 0
 
     ser.position(0, 3)
-    ser.str(string("AccelScale: "))
-    ser.dec(accel.AccelScale(-2))
-    ser.newline
-    ser.str(string("AccelADCRes: "))
-    ser.dec(accel.AccelADCRes(-2))
-    ser.newline
-    ser.str(string("AccelDataRate: "))
-    ser.dec(accel.AccelDataRate(-2))
-    ser.newline
-'    ser.str(string("FIFOMode: "))
-'    ser.dec(accel.FIFOMode(-2))
-'    ser.newline
-'    ser.str(string("IntMask: "))
+    ser.printf("AccelScale: %d\n", accel.AccelScale)
+    ser.printf("AccelADCRes: %d\n", accel.AccelADCRes)
+    ser.printf("AccelDataRate: %d\n", accel.AccelDataRate)
+    ser.printf("FIFOMode: %d\n", accel.FIFOMode)
+'    ser.printf("IntMask: "))
 '    ser.bin(accel.IntMask(-2), 8)
 '    ser.newline
-'    ser.str(string("AccelSelfTest: "))
+'    ser.printf("AccelSelfTest: "))
 '    ser.dec(accel.AccelSelfTest(-2))
 '    ser.newline
 
@@ -88,7 +80,7 @@ PUB Main | dispmode
         case ser.RxCheck
             "q", "Q":
                 ser.Position(0, 12)
-                ser.str(string("Halting"))
+                ser.printf("Halting")
                 accel.Stop
                 time.MSleep(5)
                 quit
@@ -115,12 +107,12 @@ PUB AccelCalc | ax, ay, az
     accel.AccelG (@ax, @ay, @az)
     if accel.AccelDataOverrun
         _overruns++
-    ser.Str (string("Accel micro-g: "))
+    ser.printf("Accel micro-g: ")
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
     ser.Str (int.DecPadded (az, 10))
     ser.Newline
-    ser.Str (string("Overruns: "))
+    ser.printf("Overruns: ")
     ser.Dec (_overruns)
 
 PUB AccelRaw | ax, ay, az
@@ -129,22 +121,22 @@ PUB AccelRaw | ax, ay, az
     accel.AccelData (@ax, @ay, @az)
     if accel.AccelDataOverrun
         _overruns++
-    ser.Str (string("Raw Accel: "))
+    ser.printf("Raw Accel: ")
     ser.Str (int.DecPadded (ax, 7))
     ser.Str (int.DecPadded (ay, 7))
     ser.Str (int.DecPadded (az, 7))
 
     ser.Newline
-    ser.Str (string("Overruns: "))
+    ser.printf("Overruns: ")
     ser.Dec (_overruns)
 
 PUB Calibrate
 
     ser.Position (0, 12)
-    ser.Str(string("Calibrating..."))
+    ser.printf("Calibrating...")
     accel.Calibrate
     ser.Position (0, 12)
-    ser.Str(string("              "))
+    ser.printf("              ")
 
 PUB Setup
 
@@ -152,11 +144,11 @@ PUB Setup
     repeat until _ser_cog := ser.StartRXTX(SER_RX, SER_TX, 0, SER_BAUD)
     time.MSleep(30)
     ser.Clear
-    ser.Str(string("Serial terminal started", ser#CR, ser#LF))
+    ser.printf("Serial terminal started\n")
     if accel.Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_HZ)
-        ser.str(string("LIS3DH driver started", ser#CR, ser#LF))
+        ser.printf("LIS3DH driver started\n")
     else
-        ser.str(string("LIS3DH driver failed to start - halting", ser#CR, ser#LF))
+        ser.printf("LIS3DH driver failed to start - halting\n")
         accel.Stop
         time.MSleep(5)
         FlashLED(LED, 500)
