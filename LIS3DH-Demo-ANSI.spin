@@ -5,7 +5,7 @@
     Description: Demo of the LIS3DH driver
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 19, 2020
+    Updated Mar 16, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -30,7 +30,7 @@ CON
 OBJ
 
     cfg     : "core.con.boardcfg.flip"
-    ser     : "com.serial.terminal"
+    ser     : "com.serial.terminal.ansi"
     time    : "time"
     io      : "io"
     int     : "string.integer"
@@ -53,6 +53,7 @@ PUB Main | dispmode
     accel.IntThresh(1_000000)                               ' 0..16_000000 (ug's, i.e., 0..16g)
     accel.IntMask(%100000)                                  ' Bits 5..0: Zhigh event | Zlow event | Yh|Yl|Xh|Xl
 
+    ser.HideCursor
     dispmode := 0
 
     ser.position(0, 3)                                      ' Read back the settings from above
@@ -89,7 +90,7 @@ PUB Main | dispmode
             "r", "R":                                       ' Change display mode: raw/calculated
                 ser.Position(0, 10)
                 repeat 2
-                    ser.ClearLine
+                    ser.ClearLine(ser#CLR_CUR_TO_END)
                     ser.Newline
                 dispmode ^= 1
 
@@ -102,6 +103,7 @@ PUB Main | dispmode
         ser.str(string("Interrupt: "))
         ser.str(lookupz(accel.Interrupt >> 6: string("No "), string("Yes")))
 
+    ser.ShowCursor
     FlashLED(LED, 100)
 
 PUB AccelCalc | ax, ay, az
@@ -143,25 +145,20 @@ PUB Calibrate
 
 PUB Setup
 
-    repeat until _ser_cog := ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
+    repeat until _ser_cog := ser.Start (115_200)
     time.MSleep(30)
     ser.Clear
-    ser.Str(string("Serial terminal started", ser#NL))
+    ser.Str(string("Serial terminal started", ser#CR, ser#LF))
     if accel.Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY)
-        ser.str(string("LIS3DH driver started", ser#NL))
+        ser.str(string("LIS3DH driver started", ser#CR, ser#LF))
     else
-        ser.str(string("LIS3DH driver failed to start - halting", ser#NL))
+        ser.str(string("LIS3DH driver failed to start - halting", ser#CR, ser#LF))
         accel.Stop
         time.MSleep(5)
         ser.Stop
         FlashLED(LED, 500)
 
-PUB FlashLED(led_pin, delay_ms)
-
-    io.Output(led_pin)
-    repeat
-        io.Toggle (led_pin)
-        time.MSleep (delay_ms)
+#include "lib.utility.spin"
 
 DAT
 {
