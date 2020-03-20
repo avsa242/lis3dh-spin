@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 16, 2020
+    Updated Mar 20, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
