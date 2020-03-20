@@ -12,6 +12,11 @@
 
 CON
 
+' ADC resolution symbols
+    LOWPOWER        = 8
+    NORMAL          = 10
+    FULL            = 12
+
 ' XYZ axis constants used throughout the driver
     X_AXIS          = 0
     Y_AXIS          = 1
