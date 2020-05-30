@@ -12,6 +12,15 @@
 
 CON
 
+' Constants used for I2C mode only
+    SLAVE_WR          = core#SLAVE_ADDR
+    SLAVE_RD          = core#SLAVE_ADDR|1
+
+    DEF_SCL           = 28
+    DEF_SDA           = 29
+    DEF_HZ            = 100_000
+    I2C_MAX_FREQ      = core#I2C_MAX_FREQ
+
 ' ADC resolution symbols
     LOWPOWER        = 8
     NORMAL          = 10
@@ -34,10 +43,17 @@ VAR
 
     long _aRes
     long _aBias[3], _aBiasRaw[3]
+    byte _sa0
 
 OBJ
 
+#ifdef LIS3DH_SPI
     spi : "com.spi.bitbang"
+#elseifdef LIS3DH_I2C
+    i2c : "com.i2c"
+#else
+#error "One of LIS3DH_SPI or LIS3DH_I2C must be defined"
+#endif
     core: "core.con.lis3dh"
     time: "time"                                                'Basic timing functions
     io  : "io"
@@ -45,17 +61,39 @@ OBJ
 PUB Null
 ''This is not a top-level object
 
+#ifdef LIS3DH_SPI
+
 PUB Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): okay
     if lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31)
         if okay := spi.start (CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN)
             time.MSleep (core#TPOR)
             if DeviceID == core#WHO_AM_I_RESP
                 return okay
-    return FALSE                                                'If we got here, something went wrong
+    return FALSE                                                ' If we got here, something went wrong
+
+#elseifdef LIS3DH_I2C
+
+PUB Start: okay
+
+    return Startx(DEF_SCL, DEF_SDA, DEF_HZ, 0)
+
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, SA0_BIT): okay
+    if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and I2C_HZ =< core#I2C_MAX_FREQ
+        if okay := i2c.Setupx(SCL_PIN, SDA_PIN, I2C_HZ)
+            time.MSleep (core#TPOR)
+            if DeviceID == core#WHO_AM_I_RESP
+                _sa0 := (||(SA0_BIT <> 0)) << 1                 ' If SA0_BIT is nonzero, consider it set
+                return okay
+    return FALSE                                                ' If we got here, something went wrong
+#endif
 
 PUB Stop
 
+#ifdef LIS3DH_SPI
     spi.Stop
+#elseifdef LIS3DH_I2C
+    i2c.terminate
+#endif
 
 PUB Defaults
 ' Factory defaults
@@ -384,30 +422,54 @@ PUB OpMode(mode) | tmp
     tmp := (tmp | mode) & core#OPMODE_REG_MASK
     writeReg(core#OPMODE_REG, 1, @tmp)
 }
-PRI readReg(reg, nr_bytes, buff_addr) | tmp
+
+PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet
 ' Read nr_bytes from register 'reg' to address 'buff_addr'
     case reg
         $07..$0D, $0F, $1E..$27, $2E..$3F:
         $28..$2D:
-            reg |= core#MS
+#ifdef LIS3DH_SPI
+            reg |= core#MS_SPI
+#elseifdef LIS3DH_I2C
+            reg |= core#MS_I2C
+#endif
         OTHER:
             return FALSE
 
+#ifdef LIS3DH_SPI
     reg |= core#R
-
     spi.Write(TRUE, @reg, 1, FALSE)                         ' Ask for reg, but don't deselect after
     spi.Read(buff_addr, nr_bytes)                           ' Read in the data (Read() always deselects after)
+#elseifdef LIS3DH_I2C
+    cmd_packet.byte[0] := SLAVE_WR | _sa0
+    cmd_packet.byte[1] := reg
 
-PRI writeReg(reg, nr_bytes, buff_addr) | tmp
+    i2c.start
+    i2c.wr_block(@cmd_packet, 2)
+    i2c.start
+    i2c.write(SLAVE_RD | _sa0)
+    i2c.rd_block(buff_addr, nr_bytes, TRUE)
+    i2c.stop
+#endif
+
+PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet
 ' Write nr_bytes to register 'reg' stored at buff_addr
     case reg
         $1E..$26, $2E, $30, $32..$34, $36..$38, $3A..$3F:
         OTHER:
             return FALSE
-
+#ifdef LIS3DH_SPI
     spi.Write(TRUE, @reg, 1, FALSE)                         ' Ask for reg, but don't deselect after
     spi.Write(TRUE, buff_addr, nr_bytes, TRUE)              ' Write data - now it can be deselected
+#elseifdef LIS3DH_I2C
+    cmd_packet.byte[0] := SLAVE_WR | _sa0
+    cmd_packet.byte[1] := reg
 
+    i2c.start
+    i2c.wr_block(@cmd_packet, 2)
+    i2c.wr_block(buff_addr, nr_bytes)
+    i2c.stop
+#endif
 DAT
 {
     --------------------------------------------------------------------------------------------------------
