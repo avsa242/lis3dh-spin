@@ -7,7 +7,7 @@ This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
 
 ## Salient Features
 
-* SPI connection at up to 1MHz (P1), ~5MHz (P2)
+* SPI connection at up to 4MHz (P1), ~5MHz (P2)
 * Read raw accelerometer data output
 * Set output data rate
 * Set full-scale range

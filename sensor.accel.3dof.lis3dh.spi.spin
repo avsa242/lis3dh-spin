@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 20, 2020
+    Updated May 30, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -34,11 +34,10 @@ VAR
 
     long _aRes
     long _aBias[3], _aBiasRaw[3]
-    byte _CS, _MOSI, _MISO, _SCK
 
 OBJ
 
-    spi : "com.spi.4w"                                          'PASM SPI Driver
+    spi : "com.spi.bitbang"
     core: "core.con.lis3dh"
     time: "time"                                                'Basic timing functions
     io  : "io"
@@ -46,24 +45,12 @@ OBJ
 PUB Null
 ''This is not a top-level object
 
-PUB Start(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN) : okay
-
-    okay := Startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, core#SCK_DELAY)
-
-PUB Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY): okay
+PUB Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): okay
     if lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31)
-        if SCL_DELAY => 1
-            if okay := spi.start (SCL_DELAY, core#CPOL)         'SPI Object Started?
-                time.MSleep (core#TPOR)
-                _CS := CS_PIN
-                _MOSI := SDA_PIN
-                _MISO := SDO_PIN
-                _SCK := SCL_PIN
-
-                io.High(_CS)
-                io.Output(_CS)
-                if DeviceID == core#WHO_AM_I_RESP
-                    return okay
+        if okay := spi.start (CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN)
+            time.MSleep (core#TPOR)
+            if DeviceID == core#WHO_AM_I_RESP
+                return okay
     return FALSE                                                'If we got here, something went wrong
 
 PUB Stop
@@ -406,12 +393,10 @@ PRI readReg(reg, nr_bytes, buff_addr) | tmp
         OTHER:
             return FALSE
 
-    io.Low(_CS)
-    spi.SHIFTOUT(_MOSI, _SCK, core#MOSI_BITORDER, 8, reg | core#R)
+    reg |= core#R
 
-    repeat tmp from 0 to nr_bytes-1
-        byte[buff_addr][tmp] := spi.SHIFTIN(_MISO, _SCK, core#MISO_BITORDER, 8)
-    io.High(_CS)
+    spi.Write(TRUE, @reg, 1, FALSE)                         ' Ask for reg, but don't deselect after
+    spi.Read(buff_addr, nr_bytes)                           ' Read in the data (Read() always deselects after)
 
 PRI writeReg(reg, nr_bytes, buff_addr) | tmp
 ' Write nr_bytes to register 'reg' stored at buff_addr
@@ -420,12 +405,8 @@ PRI writeReg(reg, nr_bytes, buff_addr) | tmp
         OTHER:
             return FALSE
 
-    io.Low(_CS)
-    spi.SHIFTOUT(_MOSI, _SCK, core#MOSI_BITORDER, 8, reg)
-
-    repeat tmp from 0 to nr_bytes-1
-        spi.SHIFTOUT(_MOSI, _SCK, core#MOSI_BITORDER, 8, byte[buff_addr][tmp])
-    io.High(_CS)
+    spi.Write(TRUE, @reg, 1, FALSE)                         ' Ask for reg, but don't deselect after
+    spi.Write(TRUE, buff_addr, nr_bytes, TRUE)              ' Write data - now it can be deselected
 
 DAT
 {

@@ -5,7 +5,7 @@
     Description: Demo of the LIS3DH driver
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 16, 2020
+    Updated May 30, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -15,7 +15,7 @@ CON
     _clkmode    = cfg#_clkmode
     _xinfreq    = cfg#_xinfreq
 
-' User-modifiable constants
+' -- User-modifiable constants
     LED         = cfg#LED1
     SER_RX      = 31
     SER_TX      = 30
@@ -25,7 +25,7 @@ CON
     SCL_PIN     = 15
     SDA_PIN     = 14
     SDO_PIN     = 13
-    SCL_DELAY   = 1
+' --
 
 OBJ
 
@@ -149,7 +149,7 @@ PUB Setup
     time.MSleep(30)
     ser.Clear
     ser.Str(string("Serial terminal started", ser#CR, ser#LF))
-    if accel.Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY)
+    if accel.Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN)
         ser.str(string("LIS3DH driver started", ser#CR, ser#LF))
     else
         ser.str(string("LIS3DH driver failed to start - halting", ser#CR, ser#LF))
