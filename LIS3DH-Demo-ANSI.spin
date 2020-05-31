@@ -43,7 +43,6 @@ OBJ
 VAR
 
     long _overruns
-    byte _ser_cog
 
 PUB Main | dispmode
 
@@ -77,7 +76,7 @@ PUB Main | dispmode
     ser.dec(accel.IntThresh(-2))                            '
     ser.newline                                             '
     ser.str(string("IntMask: "))                            '
-    ser.bin(accel.IntMask(-2), 8)                           '
+    ser.bin(accel.IntMask(-2), 6)                           '
     ser.newline                                             '
 
     repeat
@@ -149,17 +148,19 @@ PUB Calibrate
 
 PUB Setup
 
-    repeat until _ser_cog := ser.Start (115_200)
+    repeat until ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
     time.MSleep(30)
     ser.Clear
     ser.Str(string("Serial terminal started", ser#CR, ser#LF))
 #ifdef LIS3DH_SPI
     if accel.Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN)
+        accel.Defaults
+        ser.str(string("LIS3DH driver started (SPI)", ser#CR, ser#LF))
 #elseifdef LIS3DH_I2C
     if accel.Startx(SCL_PIN, SDA_PIN, I2C_HZ, SLAVE_OPT)
         accel.Defaults
+        ser.str(string("LIS3DH driver started (I2C)", ser#CR, ser#LF))
 #endif
-        ser.str(string("LIS3DH driver started", ser#CR, ser#LF))
     else
         ser.str(string("LIS3DH driver failed to start - halting", ser#CR, ser#LF))
         accel.Stop
