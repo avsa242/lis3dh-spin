@@ -1,13 +1,13 @@
 # lis3dh-spin 
 -------------
 
-This is a P8X32A/Propeller driver object for the ST LIS3DH 3DoF accelerometer
+This is a P8X32A/Propeller, P2X8C4M64P driver object for the ST LIS3DH 3DoF accelerometer
 
 **IMPORTANT**: This software is meant to be used with the [spin-standard-library](https://github.com/avsa242/spin-standard-library) (P8X32A) or [p2-spin-standard-library](https://github.com/avsa242/p2-spin-standard-library) (P2X8C4M64P). Please install the applicable library first before attempting to use this code, otherwise you will be missing several files required to build the project.
 
 ## Salient Features
 
-* I2C connection at up to 400kHz (P1), SPI connection at up to 4MHz (P1), ~5MHz (P2)
+* I2C connection at up to 400kHz (P1, P2) SPI connection at up to 4MHz (P1), ~5MHz (P2)
 * Read raw or scaled accelerometer data output
 * Set output data rate
 * Set full-scale range
@@ -48,6 +48,7 @@ P2/SPIN2:
 - [ ] Add method to perform self-test
 - [x] Add support for setting interrupt masks and reading flags
 - [ ] Add 3-wire SPI driver variant
-- [x] Add I2C driver variant (WIP - P1, no P2 yet)
+- [x] Add I2C driver variant (combined with SPI driver)
 - [ ] Add support for temperature sensor
 - [ ] Add support for auxilliary ADC
+- [ ] Add support for interrupt pin

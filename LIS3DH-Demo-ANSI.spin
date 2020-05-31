@@ -5,7 +5,7 @@
     Description: Demo of the LIS3DH driver
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated May 30, 2020
+    Updated May 31, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
