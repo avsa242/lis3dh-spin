@@ -16,6 +16,7 @@ This is a P8X32A/Propeller, P2X8C4M64P driver object for the ST LIS3DH 3DoF acce
 * Set calibration offsets
 * FIFO control and flag reading (empty, full, number of unread samples)
 * Set interrupt sources by mask, set threshold level, read interrupt flags
+* Single and double-click detection
 
 ## Requirements
 
@@ -43,7 +44,7 @@ P2/SPIN2:
 
 - [x] Implement P2/SPIN2 driver
 - [x] Implement calibration
-- [ ] Implement click detection
+- [x] Implement click detection
 - [ ] Implement free-fall detection
 - [ ] Add method to perform self-test
 - [x] Add support for setting interrupt masks and reading flags

@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated May 31, 2020
+    Updated Jul 12, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -272,10 +272,158 @@ PUB Calibrate | tmpX, tmpY, tmpZ, tmpBiasRaw[3], axis, samples
     FIFOEnabled(FALSE)
     FIFOMode (BYPASS)
 
+PUB ClickAxisEnabled(mask): enabled_axes
+' Enable click detection per axis, and per click type
+'   Valid values:
+'       Bits: 5..0
+'       [5..4]: Z-axis double-click..single-click
+'       [3..2]: Y-axis double-click..single-click
+'       [1..0]: X-axis double-click..single-click
+'   Any other value polls the chip and returns the current setting
+    readReg(core#CLICK_CFG, 1, @enabled_axes)
+    case mask
+        %000000..%111111:
+        OTHER:
+            return
+
+    writeReg(core#CLICK_CFG, 1, @mask)
+
+PUB Clicked: bool
+' Flag indicating the sensor was single or double-clicked
+'   Returns: TRUE (-1) if sensor was single-clicked or double-clicked
+'            FALSE (0) otherwise
+    bool := ((clickedint >> core#FLD_SCLICK) & %11) <> 0
+
+PUB ClickedInt: active_ints
+' Clicked interrupt status
+'   Bits: 6..0
+'       6: Interrupt active
+'       5: Double-clicked
+'       4: Single-clicked
+'       3: Click sign (0: positive, 1: negative)
+'       2: Z-axis clicked
+'       1: Y-axis clicked
+'       0: X-axis clicked
+    readReg(core#CLICK_SRC, 1, @active_ints)
+
+PUB ClickIntEnabled(enabled): curr_setting
+' Enable click interrupts on INT1
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    readReg(core#CTRL_REG3, 1, @curr_setting)
+    case ||(enabled)
+        0, 1:
+            enabled := ||(enabled) << core#FLD_I1_CLICK
+        OTHER:
+            return (curr_setting >> core#FLD_I1_CLICK) == 1
+
+    curr_setting &= core#MASK_I1_CLICK
+    curr_setting := (curr_setting | enabled)
+    writeReg(core#CTRL_REG3, 1, @curr_setting)
+
+PUB ClickLatency(usec): curr_setting | time_res
+' Set maximum elapsed interval between start of click and end of click, in uSec
+'   (i.e., time from set ClickThresh exceeded to falls back below threshold)
+'   Valid values:
+'       AccelDataRate:  Min time (uS, also step size)  Max time (uS)   (equiv. range in mS)
+'       1               1_000_000                   .. 255_000_000     1,000 .. 255,000
+'       10              100_000                     .. 25_500_000        100 .. 25,500
+'       25              40_000                      .. 10_200_000       40.0 .. 10,200
+'       50              20_000                      .. 5_100_000        20.0 .. 5,100
+'       100             10_000                      .. 2_550_000        10.0 .. 2,550
+'       200             5_000                       .. 1_275_000         5.0 .. 1,275
+'       400             2_500                       .. 637_500           2.5 .. 637.5
+'       1344            744                         .. 189_732         0.744 .. 189.732
+'       1600            625                         .. 159_375         0.625 .. 159.375
+'   Any other value polls the chip and returns the current setting
+'   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
+'   NOTE: ST application note example uses AccelDataRate(400)
+    time_res := 1_000000 / acceldatarate(-2)                ' Resolution is (1 / AccelDataRate)
+    readReg(core#TIME_LATENCY, 1, @curr_setting)
+    case usec
+        0..(time_res * 255):
+            usec := (usec / time_res)
+        OTHER:
+            return (curr_setting * time_res)
+
+    writeReg(core#TIME_LATENCY, 1, @usec)
+
+PUB ClickThresh(level): curr_thresh | ares
+' Set threshold for recognizing a click, in micro-g's
+'   Valid values:
+'       AccelScale  Max thresh
+'       2           1_984375 (= 1.984375g)
+'       4           3_968750 (= 3.968750g)
+'       8           7_937500 (= 7.937500g)
+'       16         15_875000 (= 15.875000g)
+'   NOTE: Each LSB = (AccelScale/128)*1M (e.g., 4g scale lsb=31250ug = 0_031250ug = 0.03125g)
+    ares := (accelscale(-2) * 1_000000) / 128               ' Resolution is current scale / 128
+    readReg(core#CLICK_THS, 1, @curr_thresh)
+    case level
+        0..(127*ares):
+            level := (level / ares)
+        OTHER:
+            return curr_thresh * ares
+
+    writeReg(core#CLICK_THS, 1, @level)
+
+PUB ClickTime(usec): curr_setting | time_res
+' Set maximum elapsed interval between start of click and end of click, in uSec
+'   (i.e., time from set ClickThresh exceeded to falls back below threshold)
+'   Valid values:
+'       AccelDataRate:  Min time (uS, also step size)  Max time (uS)   (equiv. mS)
+'       1               1_000_000                   .. 127_000_000     127,000
+'       10              100_000                     .. 12_700_000       12,700
+'       25              40_000                      .. 5_080_000         5,080
+'       50              20_000                      .. 2_540_000         2,540
+'       100             10_000                      .. 1_270_000         1,127
+'       200             5_000                       .. 635_000             635
+'       400             2_500                       .. 317_500             317
+'       1344            744                         .. 94_494               94
+'       1600            625                         .. 79_375               79
+'   Any other value polls the chip and returns the current setting
+'   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
+'   NOTE: ST application note example uses AccelDataRate(400)
+    time_res := 1_000000 / acceldatarate(-2)                ' Resolution is (1 / AccelDataRate)
+    readReg(core#TIME_LIMIT, 1, @curr_setting)
+    case usec
+        0..(time_res * 127):
+            usec := (usec / time_res)
+        OTHER:
+            return (curr_setting * time_res)
+
+    writeReg(core#TIME_LIMIT, 1, @usec)
+
 PUB DeviceID
 ' Read device identification
     result := $00
     readReg(core#WHO_AM_I, 1, @result)
+
+PUB DoubleClickWindow(usec): curr_setting | time_res
+' Set maximum elapsed interval between two consecutive clicks, in uSec
+'   Valid values:
+'       AccelDataRate:  Min time (uS, also step size)  Max time (uS)   (equiv. range in mS)
+'       1               1_000_000                   .. 255_000_000     1,000 .. 255,000
+'       10              100_000                     .. 25_500_000        100 .. 25,500
+'       25              40_000                      .. 10_200_000       40.0 .. 10,200
+'       50              20_000                      .. 5_100_000        20.0 .. 5,100
+'       100             10_000                      .. 2_550_000        10.0 .. 2,550
+'       200             5_000                       .. 1_275_000         5.0 .. 1,275
+'       400             2_500                       .. 637_500           2.5 .. 637.5
+'       1344            744                         .. 189_732         0.744 .. 189.732
+'       1600            625                         .. 159_375         0.625 .. 159.375
+'   Any other value polls the chip and returns the current setting
+'   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
+'   NOTE: ST application note example uses AccelDataRate(400)
+    time_res := 1_000000 / acceldatarate(-2)                ' Resolution is (1 / AccelDataRate)
+    readReg(core#TIME_WINDOW, 1, @curr_setting)
+    case usec
+        0..(time_res * 255):
+            usec := (usec / time_res)
+        OTHER:
+            return (curr_setting * time_res)
+
+    writeReg(core#TIME_WINDOW, 1, @usec)
 
 PUB FIFOEnabled(enabled) | tmp
 ' Enable FIFO memory
@@ -358,7 +506,6 @@ PUB Interrupt
 '       0: X-axis low event
     readReg(core#INT1_SRC, 1, @result)
 
-
 PUB IntMask(mask) | tmp
 ' Set interrupt mask
 '   Bits:   543210
@@ -379,7 +526,7 @@ PUB IntMask(mask) | tmp
 
     writeReg(core#INT1_CFG, 1, @mask)
 
-PUB IntThresh(level) | tmp
+PUB IntThresh(level) | tmp                                  ' XXX expand comments below a bit
 ' Set interrupt threshold level, in micro-g's
 '   Valid values: 0..16_000000
     tmp := $00
@@ -439,7 +586,7 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet
 #ifdef LIS3DH_SPI
     reg |= core#R
     spi.Write(TRUE, @reg, 1, FALSE)                             ' Ask for reg, but don't deselect after
-    spi.Read(buff_addr, nr_bytes, TRUE)                               ' Read in the data (Read() always deselects after)
+    spi.Read(buff_addr, nr_bytes, TRUE)                         ' Read in the data
 #elseifdef LIS3DH_I2C
     cmd_packet.byte[0] := SLAVE_WR | _sa0
     cmd_packet.byte[1] := reg
