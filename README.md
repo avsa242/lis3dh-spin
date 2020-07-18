@@ -7,7 +7,7 @@ This is a P8X32A/Propeller, P2X8C4M64P driver object for the ST LIS3DH 3DoF acce
 
 ## Salient Features
 
-* I2C connection at up to 400kHz (P1, P2) SPI connection at up to 4MHz (P1), ~5MHz (P2)
+* I2C connection at up to 400kHz (P1, P2) SPI connection (4w) at up to 4MHz (P1), ~5MHz (P2)
 * Read raw or scaled accelerometer data output
 * Set output data rate
 * Set full-scale range
@@ -31,7 +31,7 @@ P2/SPIN2:
 ## Compiler Compatibility
 
 * P1/SPIN1: OpenSpin (tested with 1.00.81)
-* P2/SPIN2: FastSpin (tested with 4.1.10-beta)
+* P2/SPIN2: FastSpin (tested with 4.2.5-beta)
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
 * ~~PNut~~ (incompatible - no preprocessor)
