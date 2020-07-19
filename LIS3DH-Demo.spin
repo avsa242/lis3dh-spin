@@ -5,27 +5,31 @@
     Description: Demo of the LIS3DH driver
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Mar 19, 2020
+    Updated Jul 19, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
-
+' Uncomment one of the following to choose which interface the LIS3DH is connected to
+'#define LIS3DH_I2C
+#define LIS3DH_SPI
 CON
 
     _clkmode    = cfg#_clkmode
     _xinfreq    = cfg#_xinfreq
 
-' User-modifiable constants
+' -- User-modifiable constants
     LED         = cfg#LED1
     SER_RX      = 31
     SER_TX      = 30
     SER_BAUD    = 115_200
 
-    CS_PIN      = 12
-    SCL_PIN     = 15
-    SDA_PIN     = 14
-    SDO_PIN     = 13
-    SCL_DELAY   = 1
+    CS_PIN      = 0                                         ' SPI
+    SCL_PIN     = 1                                         ' SPI, I2C
+    SDA_PIN     = 2                                         ' SPI, I2C
+    SDO_PIN     = 3                                         ' SPI
+    I2C_HZ      = 400_000                                   ' I2C
+    SLAVE_OPT   = 0
+' --
 
 OBJ
 
@@ -34,12 +38,11 @@ OBJ
     time    : "time"
     io      : "io"
     int     : "string.integer"
-    accel   : "sensor.accel.3dof.lis3dh.spi"
+    accel   : "sensor.accel.3dof.lis3dh.i2cspi"
 
 VAR
 
     long _overruns
-    byte _ser_cog
 
 PUB Main | dispmode
 
@@ -143,25 +146,27 @@ PUB Calibrate
 
 PUB Setup
 
-    repeat until _ser_cog := ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
+    repeat until ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
     time.MSleep(30)
     ser.Clear
     ser.Str(string("Serial terminal started", ser#NL))
-    if accel.Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_DELAY)
-        ser.str(string("LIS3DH driver started", ser#NL))
+#ifdef LIS3DH_SPI
+    if accel.Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN)
+        accel.Defaults
+        ser.str(string("LIS3DH driver started (SPI)", ser#NL))
+#elseifdef LIS3DH_I2C
+    if accel.Startx(SCL_PIN, SDA_PIN, I2C_HZ, SLAVE_OPT)
+        accel.Defaults
+        ser.str(string("LIS3DH driver started (I2C)", ser#NL))
+#endif
     else
         ser.str(string("LIS3DH driver failed to start - halting", ser#NL))
         accel.Stop
         time.MSleep(5)
         ser.Stop
-        FlashLED(LED, 500)
+        flashled(LED, 500)
 
-PUB FlashLED(led_pin, delay_ms)
-
-    io.Output(led_pin)
-    repeat
-        io.Toggle (led_pin)
-        time.MSleep (delay_ms)
+#include "lib.utility.spin"
 
 DAT
 {

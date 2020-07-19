@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated Jul 18, 2020
+    Updated Jul 19, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -29,6 +29,9 @@ CON
     BARO_DOF        = 0
     DOF             = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
 
+    R               = 0
+    W               = 1
+
 ' ADC resolution symbols
     LOWPOWER        = 8
     NORMAL          = 10
@@ -39,7 +42,9 @@ CON
     Y_AXIS          = 1
     Z_AXIS          = 2
 
-' Operating modes
+' Operating modes (dummy)
+    STANDBY         = 0
+    MEASURE         = 1
 
 ' FIFO modes
     BYPASS          = %00
@@ -49,8 +54,8 @@ CON
 
 VAR
 
-    long _aRes
-    long _aBias[3], _aBiasRaw[3]
+    long _ares
+    long _abias[3], _abiasraw[3]
     byte _sa0
 
 OBJ
@@ -158,6 +163,36 @@ PUB AccelAxisEnabled(xyz_mask) | tmp
     tmp := (tmp | xyz_mask) & core#CTRL_REG1_MASK
     writeReg(core#CTRL_REG1, 1, @tmp)
 
+PUB AccelBias(axBias, ayBias, azBias, rw)
+' Read or write/manually set accelerometer calibration offset values
+'   Valid values:
+'       rw:
+'           R (0), W (1)
+'       axBias, ayBias, azBias:
+'           -32768..32767
+'   NOTE: When rw is set to READ, axBias, ayBias and azBias must be addresses of respective variables to hold the returned calibration offset values.
+    case rw
+        R:
+            long[axBias] := _abiasraw[X_AXIS]
+            long[ayBias] := _abiasraw[Y_AXIS]
+            long[azBias] := _abiasraw[Z_AXIS]
+
+        W:
+            case axBias
+                -32768..32767:
+                    _abiasraw[X_AXIS] := axBias
+                OTHER:
+
+            case ayBias
+                -32768..32767:
+                    _abiasraw[Y_AXIS] := ayBias
+                OTHER:
+
+            case azBias
+                -32768..32767:
+                    _abiasraw[Z_AXIS] := azBias
+                OTHER:
+
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
     bytefill(@tmp, $00, 8)
@@ -167,9 +202,9 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[2]
 
-    long[ptr_x] -= _aBiasRaw[X_AXIS]
-    long[ptr_y] -= _aBiasRaw[Y_AXIS]
-    long[ptr_z] -= _aBiasRaw[Z_AXIS]
+    long[ptr_x] -= _abiasraw[X_AXIS]
+    long[ptr_y] -= _abiasraw[Y_AXIS]
+    long[ptr_z] -= _abiasraw[Z_AXIS]
 
 PUB AccelDataOverrun
 ' Indicates previously acquired data has been overwritten
@@ -210,12 +245,12 @@ PUB AccelDataReady
     readReg(core#STATUS_REG, 1, @result)
     result := ((result >> core#FLD_ZYXDA) & %1) * TRUE
 
-PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpX, tmpY, tmpZ
+PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
 ' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)
-    AccelData(@tmpX, @tmpY, @tmpZ)
-    long[ptr_x] := tmpX * _aRes
-    long[ptr_y] := tmpY * _aRes
-    long[ptr_z] := tmpZ * _aRes
+    AccelData(@tmpx, @tmpy, @tmpz)
+    long[ptr_x] := tmpx * _ares
+    long[ptr_y] := tmpy * _ares
+    long[ptr_z] := tmpz * _ares
 
 PUB AccelScale(g) | tmp
 ' Set measurement range of the accelerometer, in g's
@@ -226,7 +261,7 @@ PUB AccelScale(g) | tmp
     case g
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16)
-            _aRes := lookupz(g: 61, 122, 244, 732)
+            _ares := lookupz(g: 61, 122, 244, 732)
             g <<= core#FLD_FS
         OTHER:
             tmp := (tmp >> core#FLD_FS) & core#BITS_FS
@@ -254,11 +289,11 @@ PUB AccelSelfTest(enabled) | tmp
     writeReg(core#ST_REG, 1, @tmp)
 }
 
-PUB Calibrate | tmpX, tmpY, tmpZ, tmpBiasRaw[3], axis, samples
+PUB Calibrate | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
 ' Calibrate the accelerometer
 '   NOTE: The accelerometer must be oriented with the package top facing up for this method to be successful
-    tmpX := tmpY := tmpZ := axis := samples := 0
-    longfill(@tmpBiasRaw, $00000000, 3)
+    tmpx := tmpy := tmpz := axis := samples := 0
+    longfill(@tmpbiasraw, $00000000, 3)
 
     FIFOEnabled(TRUE)
     FIFOMode(FIFO)
@@ -269,16 +304,24 @@ PUB Calibrate | tmpX, tmpY, tmpZ, tmpBiasRaw[3], axis, samples
     repeat samples
 ' Read the accel data stored in the FIFO
         AccelData(@tmpx, @tmpy, @tmpz)
-        tmpBiasRaw[X_AXIS] += tmpx
-        tmpBiasRaw[Y_AXIS] += tmpy
-        tmpBiasRaw[Z_AXIS] += tmpz - (1_000_000 / _aRes) ' Assumes sensor facing up!
+        tmpbiasraw[X_AXIS] += tmpx
+        tmpbiasraw[Y_AXIS] += tmpy
+        tmpbiasraw[Z_AXIS] += tmpz - (1_000_000 / _ares) ' Assumes sensor facing up!
 
     repeat axis from X_AXIS to Z_AXIS
-        _aBiasRaw[axis] := tmpBiasRaw[axis] / samples
-        _aBias[axis] := _aBiasRaw[axis] / _aRes
+        _abias[axis] := _abiasraw[axis] / _ares
+
+    accelbias(_abiasraw[X_AXIS]/samples, _abiasraw[Y_AXIS]/samples, _abiasraw[Z_AXIS]/samples, W)
 
     FIFOEnabled(FALSE)
     FIFOMode (BYPASS)
+
+PUB CalibrateXLG
+
+    calibrate
+
+PUB CalibrateMag(samples)
+' Dummy method
 
 PUB ClickAxisEnabled(mask): enabled_axes
 ' Enable click detection per axis, and per click type
@@ -502,6 +545,24 @@ PUB FIFOUnreadSamples
     readReg(core#FIFO_SRC_REG, 1, @result)
     result &= core#BITS_FSS
 
+PUB GyroAxisEnabled(xyzmask)
+' Dummy method
+
+PUB GyroBias(x, y, z, rw)
+' Dummy method
+
+PUB GyroData(x, y, z)
+' Dummy method
+
+PUB GyroDataReady
+' Dummy method
+
+PUB GyroDPS(x, y, z)
+' Dummy method
+
+PUB GyroScale(scale)
+' Dummy method
+
 PUB Interrupt
 ' Read interrupt state
 '   Bit 6543210 (For each bit, 0: No interrupt, 1: Interrupt has been generated)
@@ -534,7 +595,7 @@ PUB IntMask(mask) | tmp
 
     writeReg(core#INT1_CFG, 1, @mask)
 
-PUB IntThresh(level) | tmp                                  ' XXX expand comments below a bit
+PUB IntThresh(level) | tmp
 ' Set interrupt threshold level, in micro-g's
 '   Valid values: 0..16_000000
     tmp := $00
@@ -558,46 +619,47 @@ PUB IntThresh(level) | tmp                                  ' XXX expand comment
     level /= tmp                                            '   7-bit range
     writeReg(core#INT1_THS, 1, @level)
 
-{
-PUB OpMode(mode) | tmp
-' Set operating mode
-'   Valid values:
-'
-'   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(core#OPMODE_REG, 1, @tmp)
-    case mode
-        mode1, mode2, modeN:
-            mode <<= core#FLD_
-        OTHER:
-            result := (tmp >> core#FLD_) & %1
-            return
+PUB MagBias(x, y, z, rw)
+' Dummy method
 
-    tmp &= core#MASK_
-    tmp := (tmp | mode) & core#OPMODE_REG_MASK
-    writeReg(core#OPMODE_REG, 1, @tmp)
-}
+PUB MagData(x, y, z)
+' Dummy method
 
-PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet
-' Read nr_bytes from register 'reg' to address 'buff_addr'
-    case reg
+PUB MagDataRate(hz)
+' Dummy method
+
+PUB MagDataReady
+' Dummy method
+
+PUB MagGauss(x, y, z)
+' Dummy method
+
+PUB MagScale(scale)
+' Dummy method
+
+PUB OpMode(mode)
+' Dummy method
+
+PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet
+' Read nr_bytes from register 'reg_nr' to address 'buff_addr'
+    case reg_nr
         $07..$0D, $0F, $1E..$27, $2E..$3F:
         $28..$2D:                                               ' If reading from accel data regs,
 #ifdef LIS3DH_SPI
-            reg |= core#MS_SPI                                  '   set multi-byte read mode (SPI)
+            reg_nr |= core#MS_SPI                                  '   set multi-byte read mode (SPI)
 #elseifdef LIS3DH_I2C
-            reg |= core#MS_I2C                                  '   set multi-byte read mode (I2C)
+            reg_nr |= core#MS_I2C                                  '   set multi-byte read mode (I2C)
 #endif
         OTHER:
             return FALSE
 
 #ifdef LIS3DH_SPI
-    reg |= core#R
-    spi.Write(TRUE, @reg, 1, FALSE)                             ' Ask for reg, but don't deselect after
+    reg_nr |= core#R
+    spi.Write(TRUE, @reg_nr, 1, FALSE)                             ' Ask for reg, but don't deselect after
     spi.Read(buff_addr, nr_bytes, TRUE)                         ' Read in the data
 #elseifdef LIS3DH_I2C
     cmd_packet.byte[0] := SLAVE_WR | _sa0
-    cmd_packet.byte[1] := reg
+    cmd_packet.byte[1] := reg_nr
 
     i2c.start                                                   ' S
     i2c.wr_block(@cmd_packet, 2)                                ' W [SL|W] [REG]
@@ -607,18 +669,18 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet
     i2c.stop                                                    ' P
 #endif
 
-PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet
-' Write nr_bytes to register 'reg' stored at buff_addr
-    case reg
+PRI writeReg(reg_nr, nr_bytes, buff_addr) | cmd_packet
+' Write nr_bytes to register 'reg_nr' stored at buff_addr
+    case reg_nr
         $1E..$26, $2E, $30, $32..$34, $36..$38, $3A..$3F:
         OTHER:
             return FALSE
 #ifdef LIS3DH_SPI
-    spi.Write(TRUE, @reg, 1, FALSE)                             ' Ask for reg, but don't deselect after
+    spi.Write(TRUE, @reg_nr, 1, FALSE)                             ' Ask for reg, but don't deselect after
     spi.Write(TRUE, buff_addr, nr_bytes, TRUE)                  ' Write data - now it can be deselected
 #elseifdef LIS3DH_I2C
     cmd_packet.byte[0] := SLAVE_WR | _sa0
-    cmd_packet.byte[1] := reg
+    cmd_packet.byte[1] := reg_nr
 
     i2c.start
     i2c.wr_block(@cmd_packet, 2)

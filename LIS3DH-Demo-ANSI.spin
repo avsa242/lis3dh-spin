@@ -5,13 +5,13 @@
     Description: Demo of the LIS3DH driver
     Copyright (c) 2020
     Started Mar 15, 2020
-    Updated May 31, 2020
+    Updated Jul 19, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
 ' Uncomment one of the following to choose which interface the LIS3DH is connected to
-'#define LIS3DH_I2C
-#define LIS3DH_SPI
+#define LIS3DH_I2C
+'#define LIS3DH_SPI
 CON
 
     _clkmode    = cfg#_clkmode
@@ -23,10 +23,10 @@ CON
     SER_TX      = 30
     SER_BAUD    = 115_200
 
-    CS_PIN      = 12                                        ' SPI
-    SCL_PIN     = 15                                        ' SPI, I2C
-    SDA_PIN     = 14                                        ' SPI, I2C
-    SDO_PIN     = 13                                        ' SPI
+    CS_PIN      = 0                                         ' SPI
+    SCL_PIN     = 1                                         ' SPI, I2C
+    SDA_PIN     = 2                                         ' SPI, I2C
+    SDO_PIN     = 3                                         ' SPI
     I2C_HZ      = 400_000                                   ' I2C
     SLAVE_OPT   = 0
 ' --
