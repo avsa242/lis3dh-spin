@@ -28,6 +28,9 @@ CON
     BARO_DOF        = 0
     DOF             = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
 
+    R               = 0
+    W               = 1
+
 ' ADC resolution symbols
     LOWPOWER        = 8
     NORMAL          = 10
@@ -38,7 +41,9 @@ CON
     Y_AXIS          = 1
     Z_AXIS          = 2
 
-' Operating modes
+' Operating modes (dummy)
+    STANDBY         = 0
+    MEASURE         = 1
 
 ' FIFO modes
     BYPASS          = %00
@@ -147,13 +152,43 @@ PUB AccelAxisEnabled(xyz_mask=-2): result | tmp
     readReg(core.CTRL_REG1, 1, @tmp)
     case_fast xyz_mask
         %000..%111:
-            xyz_mask := (xyz_mask rev 3) & core.BITS_XYZEN
+            xyz_mask := (xyz_mask rev 2) & core.BITS_XYZEN
         OTHER:
             return tmp & core.BITS_XYZEN
 
     tmp &= core.MASK_XYZEN
     tmp := (tmp | xyz_mask) & core.CTRL_REG1_MASK
     writeReg(core.CTRL_REG1, 1, @tmp)
+
+PUB AccelBias(axBias, ayBias, azBias, rw=0)
+' Read or write/manually set accelerometer calibration offset values
+'   Valid values:
+'       rw:
+'           R (0), W (1)
+'       axBias, ayBias, azBias:
+'           -32768..32767
+'   NOTE: When rw is set to READ, axBias, ayBias and azBias must be addresses of respective variables to hold the returned calibration offset values.
+    case rw
+        R:
+            long[axBias] := _aBiasRaw[X_AXIS]
+            long[ayBias] := _aBiasRaw[Y_AXIS]
+            long[azBias] := _aBiasRaw[Z_AXIS]
+
+        W:
+            case axBias
+                -32768..32767:
+                    _aBiasRaw[X_AXIS] := axBias
+                OTHER:
+
+            case ayBias
+                -32768..32767:
+                    _aBiasRaw[Y_AXIS] := ayBias
+                OTHER:
+
+            case azBias
+                -32768..32767:
+                    _aBiasRaw[Z_AXIS] := azBias
+                OTHER:
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
@@ -277,6 +312,13 @@ PUB Calibrate() | tmpX, tmpY, tmpZ, tmpBiasRaw[3], axis, samples
 
     FIFOEnabled(FALSE)
     FIFOMode (BYPASS)
+
+PUB CalibrateXLG()
+
+    calibrate()
+
+PUB CalibrateMag(samples)
+' Dummy method
 
 PUB ClickAxisEnabled(mask=-2): enabled_axes
 ' Enable click detection per axis, and per click type
@@ -503,6 +545,24 @@ PUB FIFOUnreadSamples(): result
     readReg(core.FIFO_SRC_REG, 1, @result)
     result &= core.BITS_FSS
 
+PUB GyroAxisEnabled(xyzmask)
+' Dummy method
+
+PUB GyroBias(x, y, z, rw=0)
+' Dummy method
+
+PUB GyroData(x, y, z)
+' Dummy method
+
+PUB GyroDataReady()
+' Dummy method
+
+PUB GyroDPS(x, y, z)
+' Dummy method
+
+PUB GyroScale(scale=-2)
+' Dummy method
+
 PUB Interrupt(): result
 ' Read interrupt state
 '   Bit 6543210 (For each bit, 0: No interrupt, 1: Interrupt has been generated)
@@ -559,25 +619,27 @@ PUB IntThresh(level=-2): tmp
     level /= tmp                                            '   7-bit range
     writeReg(core.INT1_THS, 1, @level)
 
-{
-PUB OpMode(mode) | tmp
-' Set operating mode
-'   Valid values:
-'
-'   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(core.OPMODE_REG, 1, @tmp)
-    case mode
-        mode1, mode2, modeN:
-            mode <<= core.FLD_
-        OTHER:
-            result := (tmp >> core.FLD_) & %1
-            return
+PUB MagBias(x, y, z, rw=0)
+' Dummy method
 
-    tmp &= core.MASK_
-    tmp := (tmp | mode) & core.OPMODE_REG_MASK
-    writeReg(core.OPMODE_REG, 1, @tmp)
-}
+PUB MagData(x, y, z)
+' Dummy method
+
+PUB MagDataRate(hz)
+' Dummy method
+
+PUB MagDataReady()
+' Dummy method
+
+PUB MagGauss(x, y, z)
+' Dummy method
+
+PUB MagScale(scale=-2)
+' Dummy method
+
+PUB OpMode(mode)
+' Dummy method
+
 PRI readReg(reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
 ' Read nr_bytes from register 'reg' to address 'buff_addr'
     case reg_nr
