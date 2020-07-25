@@ -318,7 +318,8 @@ PUB Calibrate() | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
     FIFOMode (BYPASS)
 
 PUB CalibrateAccel()
-' Dummy method
+
+    calibrate()
 
 PUB CalibrateGyro()
 ' Dummy method
