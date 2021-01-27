@@ -168,9 +168,8 @@ PUB AccelAxisEnabled(mask): curr_mask
         other:
             return curr_mask & core#XYZEN_BITS
 
-    curr_mask &= core#XYZEN_MASK
-    curr_mask := (curr_mask | mask) & core#CTRL_REG1_MASK
-    writereg(core#CTRL_REG1, 1, @curr_mask)
+    mask := ((curr_mask & core#XYZEN_MASK) | mask)
+    writereg(core#CTRL_REG1, 1, @mask)
 
 PUB Accelbias(axbias, aybias, azbias, rw)
 ' Read or write/manually set accelerometer calibration offset values
@@ -205,7 +204,7 @@ PUB Accelbias(axbias, aybias, azbias, rw)
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Reads the Accelerometer output registers
-    bytefill(@tmp, 0, 8)
+    longfill(@tmp, 0, 2)
     readreg(core#OUT_X_L, 6, @tmp)
 
     long[ptr_x] := ~~tmp.word[X_AXIS]
@@ -243,9 +242,8 @@ PUB AccelDataRate(rate): curr_rate
             curr_rate := (curr_rate >> core#ODR) & core#ODR_BITS
             return lookupz(curr_rate: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600)
 
-    curr_rate &= core#ODR_MASK
-    curr_rate := (curr_rate | rate) & core#CTRL_REG1_MASK
-    writereg(core#CTRL_REG1, 1, @curr_rate)
+    rate := ((curr_rate & core#ODR_MASK) | rate)
+    writereg(core#CTRL_REG1, 1, @rate)
 
 PUB AccelDataReady{}: flag
 ' Flagt indicating data is ready
@@ -279,9 +277,8 @@ PUB AccelScale(scale): curr_scl
             curr_scl := (curr_scl >> core#FS) & core#FS_BITS
             return lookupz(curr_scl: 2, 4, 8, 16)
 
-    curr_scl &= core#FS_MASK
-    curr_scl := (curr_scl | scale) & core#CTRL_REG4_MASK
-    writereg(core#CTRL_REG4, 1, @curr_scl)
+    scale := ((curr_scl & core#FS_MASK) | scale)
+    writereg(core#CTRL_REG4, 1, @scale)
 {
 PUB AccelSelfTest(enabled) | tmp
 ' Enable self-test mode
@@ -384,9 +381,8 @@ PUB ClickIntEnabled(state): curr_state
         other:
             return ((curr_state >> core#I1_CLICK) == 1)
 
-    curr_state &= core#I1_CLICK_MASK
-    curr_state := (curr_state | state)
-    writereg(core#CTRL_REG3, 1, @curr_state)
+    state := ((curr_state & core#I1_CLICK_MASK) | state)
+    writereg(core#CTRL_REG3, 1, @state)
 
 PUB ClickLatency(ltime): curr_ltime | time_res
 ' Set maximum elapsed interval between start of click and end of click, in uSec
@@ -405,15 +401,14 @@ PUB ClickLatency(ltime): curr_ltime | time_res
 '   Any other value polls the chip and returns the current setting
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
-    time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
-    readreg(core#TIME_LATENCY, 1, @curr_ltime)
     case ltime
         0..(time_res * 255):
             ltime := (ltime / time_res)
+            writereg(core#TIME_LATENCY, 1, @ltime)
         other:
+            time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
+            readreg(core#TIME_LATENCY, 1, @curr_ltime)
             return (curr_ltime * time_res)
-
-    writereg(core#TIME_LATENCY, 1, @ltime)
 
 PUB ClickThresh(thresh): curr_thresh | ares
 ' Set threshold for recognizing a click, in micro-g's
@@ -424,15 +419,14 @@ PUB ClickThresh(thresh): curr_thresh | ares
 '       8           7_937500 (= 7.937500g)
 '       16         15_875000 (= 15.875000g)
 '   NOTE: Each LSB = (AccelScale/128)*1M (e.g., 4g scale lsb=31250ug = 0_031250ug = 0.03125g)
-    ares := (accelscale(-2) * 1_000000) / 128   ' Resolution = scale / 128
-    readreg(core#CLICK_THS, 1, @curr_thresh)
     case thresh
         0..(127*ares):
             thresh := (thresh / ares)
+            writereg(core#CLICK_THS, 1, @thresh)
         other:
+            ares := (accelscale(-2) * 1_000000) / 128   ' res. = scale / 128
+            readreg(core#CLICK_THS, 1, @curr_thresh)
             return curr_thresh * ares
-
-    writereg(core#CLICK_THS, 1, @thresh)
 
 PUB ClickTime(ctime): curr_ctime | time_res
 ' Set maximum elapsed interval between start of click and end of click, in uSec
@@ -451,15 +445,14 @@ PUB ClickTime(ctime): curr_ctime | time_res
 '   Any other value polls the chip and returns the current setting
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
-    time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
-    readreg(core#TIME_LIMIT, 1, @curr_ctime)
     case ctime
         0..(time_res * 127):
             ctime := (ctime / time_res)
+            writereg(core#TIME_LIMIT, 1, @ctime)
         other:
+            time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
+            readreg(core#TIME_LIMIT, 1, @curr_ctime)
             return (curr_ctime * time_res)
-
-    writereg(core#TIME_LIMIT, 1, @ctime)
 
 PUB DeviceID{}: id
 ' Read device identification
@@ -483,15 +476,14 @@ PUB DoubleClickWindow(dctime): curr_dctime | time_res
 '   Any other value polls the chip and returns the current setting
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
-    time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
-    readreg(core#TIME_WINDOW, 1, @curr_dctime)
     case dctime
         0..(time_res * 255):
             dctime := (dctime / time_res)
+            writereg(core#TIME_WINDOW, 1, @dctime)
         other:
+            time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
+            readreg(core#TIME_WINDOW, 1, @curr_dctime)
             return (curr_dctime * time_res)
-
-    writereg(core#TIME_WINDOW, 1, @dctime)
 
 PUB FIFOEnabled(state): curr_state
 ' Enable FIFO memory
@@ -505,9 +497,8 @@ PUB FIFOEnabled(state): curr_state
         other:
             return (((curr_state >> core#FIFO_EN) & 1) == 1)
 
-    curr_state &= core#FIFO_EN_MASK
-    curr_state := (curr_state | state) & core#CTRL_REG5_MASK
-    writereg(core#CTRL_REG5, 1, @curr_state)
+    state := ((curr_state & core#FIFO_EN_MASK) | state)
+    writereg(core#CTRL_REG5, 1, @state)
 
 PUB FIFOEmpty{}: flag
 ' Flag indicating FIFO is empty
@@ -536,9 +527,8 @@ PUB FIFOMode(mode): curr_mode
         other:
             return ((curr_mode >> core#FM) & core#FM_BITS)
 
-    curr_mode &= core#FM_MASK
-    curr_mode := (curr_mode | mode) & core#FIFO_CTRL_REG_MASK
-    writereg(core#FIFO_CTRL_REG, 1, @curr_mode)
+    mode := ((curr_mode & core#FM_MASK) | mode)
+    writereg(core#FIFO_CTRL_REG, 1, @mode)
 
 PUB FIFOThreshold(thresh): curr_thr
 ' Set FIFO threshold level
@@ -551,9 +541,8 @@ PUB FIFOThreshold(thresh): curr_thr
         other:
             return ((curr_thr & core#FTH) + 1)
 
-    curr_thr &= core#FTH_MASK
-    curr_thr := (curr_thr | thresh) & core#FIFO_CTRL_REG_MASK
-    writereg(core#FIFO_CTRL_REG, 1, @curr_thr)
+    thresh := ((curr_thr & core#FTH_MASK) | thresh)
+    writereg(core#FIFO_CTRL_REG, 1, @thresh)
 
 PUB FIFOUnreadSamples{}: nr_smp
 ' Number of unread samples stored in FIFO
