@@ -76,7 +76,7 @@ PUB Null{}
 
 #ifdef LIS3DH_SPI
 
-PUB Start(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): status
+PUB Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): status
 ' Start using custom I/O pins
     if lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and {
 }   lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31)
@@ -99,7 +99,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, SA0_BIT): status
 ' Start using custom IO pins and I2C bus frequency
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
 }   I2C_HZ =< core#I2C_MAX_FREQ
-        if status := i2c.setupx(SCL_PIN, SDA_PIN, I2C_HZ)
+        if status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ)
             _sa0 := (||(SA0_BIT <> 0)) << 1     ' If SA0_BIT is nonzero, it's 1
             time.msleep (core#TPOR)
             if deviceid{} == core#WHO_AM_I_RESP
@@ -123,6 +123,26 @@ PUB Defaults{}
     accelscale(2)
     acceldatarate(0)
     accelaxisenabled(%111)
+
+PUB Preset_Active{}
+' Like Defaults(), but
+'   * data rate set to 50Hz
+    accelscale(2)
+    acceldatarate(50)
+    accelaxisenabled(%111)
+
+PUB Preset_ClickDet{}
+' Presets for click-detection
+    acceladcres(12)
+    accelscale(4)
+    acceldatarate(400)
+    accelaxisenabled(%111)
+    clickthresh(1_187500)
+    clickaxisenabled(%11_00_00)
+    clicktime(127_000)
+    doubleclickwindow(637_500)
+    clicklatency(150_000)
+    clickintenabled(TRUE)
 
 PUB AccelADCRes(adc_res): curr_res | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
@@ -171,7 +191,7 @@ PUB AccelAxisEnabled(mask): curr_mask
     mask := ((curr_mask & core#XYZEN_MASK) | mask)
     writereg(core#CTRL_REG1, 1, @mask)
 
-PUB Accelbias(axbias, aybias, azbias, rw)
+PUB AccelBias(axbias, aybias, azbias, rw)
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       rw:
@@ -298,7 +318,7 @@ PUB AccelSelfTest(enabled) | tmp
     writereg(core#ST_REG, 1, @tmp)
 }
 
-PUB Calibrate{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
+PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples
 ' Calibrate the accelerometer
 '   NOTE: The accelerometer must be oriented with the package top facing up
 '       for this method to be successful
@@ -332,7 +352,7 @@ PUB CalibrateGyro{}
 
 PUB CalibrateXLG{}
 
-    calibrate{}
+    calibrateaccel{}
 
 PUB CalibrateMag(samples)
 ' Dummy method
@@ -401,12 +421,12 @@ PUB ClickLatency(ltime): curr_ltime | time_res
 '   Any other value polls the chip and returns the current setting
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
+    time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
     case ltime
         0..(time_res * 255):
             ltime := (ltime / time_res)
             writereg(core#TIME_LATENCY, 1, @ltime)
         other:
-            time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
             readreg(core#TIME_LATENCY, 1, @curr_ltime)
             return (curr_ltime * time_res)
 
@@ -419,12 +439,12 @@ PUB ClickThresh(thresh): curr_thresh | ares
 '       8           7_937500 (= 7.937500g)
 '       16         15_875000 (= 15.875000g)
 '   NOTE: Each LSB = (AccelScale/128)*1M (e.g., 4g scale lsb=31250ug = 0_031250ug = 0.03125g)
+    ares := (accelscale(-2) * 1_000000) / 128   ' res. = scale / 128
     case thresh
         0..(127*ares):
             thresh := (thresh / ares)
             writereg(core#CLICK_THS, 1, @thresh)
         other:
-            ares := (accelscale(-2) * 1_000000) / 128   ' res. = scale / 128
             readreg(core#CLICK_THS, 1, @curr_thresh)
             return curr_thresh * ares
 
@@ -445,12 +465,12 @@ PUB ClickTime(ctime): curr_ctime | time_res
 '   Any other value polls the chip and returns the current setting
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
+    time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
     case ctime
         0..(time_res * 127):
             ctime := (ctime / time_res)
             writereg(core#TIME_LIMIT, 1, @ctime)
         other:
-            time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
             readreg(core#TIME_LIMIT, 1, @curr_ctime)
             return (curr_ctime * time_res)
 
@@ -476,12 +496,12 @@ PUB DoubleClickWindow(dctime): curr_dctime | time_res
 '   Any other value polls the chip and returns the current setting
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
+    time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
     case dctime
         0..(time_res * 255):
             dctime := (dctime / time_res)
             writereg(core#TIME_WINDOW, 1, @dctime)
         other:
-            time_res := 1_000000 / acceldatarate(-2)    ' res. = (1 / data rate)
             readreg(core#TIME_WINDOW, 1, @curr_dctime)
             return (curr_dctime * time_res)
 

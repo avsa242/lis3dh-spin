@@ -17,9 +17,7 @@ CON
     I2C_MAX_FREQ        = 400_000
 
 ' SPI Configuration
-    CPOL                = 0             ' Datasheet diagrams imply it's 1, but it doesn't work
-    MOSI_BITORDER       = 5             ' MSBFIRST
-    MISO_BITORDER       = 0             ' MSBPRE
+    SPI_MODE            = 0
     SCK_DELAY           = 1             ' P1/SPIN1
     SCK_MAX_FREQ        = 10_000_000    ' P2/SPIN2
 
