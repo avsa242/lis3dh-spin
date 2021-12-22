@@ -1,17 +1,15 @@
 {
     --------------------------------------------
-    Filename: LIS3DH-Demo.spin
+    Filename: LIS3DH-FreeFallDemo.spin
     Author: Jesse Burt
     Description: Demo of the LIS3DH driver
+        Free-fall detection functionality
     Copyright (c) 2021
-    Started Aug 12, 2017
-    Updated Apr 29, 2021
+    Started Dec 22, 2021
+    Updated Dec 22, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
-' Uncomment one of the following to choose which interface the LIS3DH is connected to
-#define LIS3DH_I2C
-'#define LIS3DH_SPI
 
 CON
 
@@ -19,15 +17,17 @@ CON
     _xinfreq    = cfg#_xinfreq
 
 ' -- User-modifiable constants
-    LED         = cfg#LED1
+    LED1        = cfg#LED1
     SER_BAUD    = 115_200
 
     CS_PIN      = 0                             ' SPI
-    SCL_PIN     = 1                             ' SPI, I2C
-    SDA_PIN     = 2                             ' SPI, I2C
+    SCL_PIN     = 28                            ' SPI, I2C
+    SDA_PIN     = 29                            ' SPI, I2C
     SDO_PIN     = 3                             ' SPI
     I2C_HZ      = 400_000                       ' I2C
     SLAVE_OPT   = 0                             ' I2C
+
+    INT1        = 24
 ' --
 
     DAT_X_COL   = 20
@@ -42,65 +42,68 @@ OBJ
     int     : "string.integer"
     accel   : "sensor.accel.3dof.lis3dh.i2cspi"
 
-PUB Main{}
+VAR
+
+    long _isr_stack[50]                         ' stack for ISR core
+    long _intflag                               ' interrupt flag
+
+PUB Main{} | intsource
 
     setup{}
-    accel.preset_active{}
+    accel.preset_freefall{}                     ' default settings, but enable
+                                                ' sensors, set scale factors,
+                                                ' and free-fall parameters
+
+    ser.position(0, 3)
+    ser.str(string("Waiting for free-fall condition..."))
+
+    ' When the sensor detects free-fall, a message is displayed and
+    '   is cleared after the user presses a key
+    ' The preset for free-fall detection sets a free-fall threshold of
+    '   0.320g's for a minimum time of 100ms. This can be tuned using
+    '   accel.FreeFallThresh() and accel.FreeFallTime():
+    accel.freefallthresh(0_320000)              ' 0.315g's
+    accel.freefalltime(100_000)                 ' 100_000us/100ms
 
     repeat
-        ser.position(0, 3)
-        accelcalc{}
-
+        if _intflag                             ' interrupt triggered?
+            intsource := accel.interrupt{}      ' read & clear interrupt flags
+            if (intsource & %01_01_01_01)    ' free-fall event?
+                ser.position(0, 4)
+                ser.str(string("Sensor in free-fall!"))
+                ser.clearline{}
+                ser.newline{}
+                ser.str(string("Press any key to reset"))
+                ser.charin{}
+                ser.positionx(0)
+                ser.clearline{}
+                ser.position(0, 4)
+                ser.str(string("Sensor stable"))
+                ser.clearline{}
         if ser.rxcheck{} == "c"                 ' press the 'c' key in the demo
             calibrate{}                         ' to calibrate sensor offsets
 
-PUB AccelCalc{} | ax, ay, az
-
-    repeat until accel.acceldataready{}         ' wait for new sensor data set
-    accel.accelg(@ax, @ay, @az)                 ' read calculated sensor data
-    ser.str(string("Accel (g):"))
-    ser.positionx(DAT_X_COL)
-    decimal(ax, 1000000)                        ' data is in micro-g's; display
-    ser.positionx(DAT_Y_COL)                    ' it as if it were a float
-    decimal(ay, 1000000)
-    ser.positionx(DAT_Z_COL)
-    decimal(az, 1000000)
-    ser.clearline{}
-    ser.newline{}
-
 PUB Calibrate{}
-
+' Calibrate sensor/set bias offsets
     ser.position(0, 7)
     ser.str(string("Calibrating..."))
     accel.calibrateaccel{}
     ser.positionx(0)
     ser.clearline{}
 
-PRI Decimal(scaled, divisor) | whole[4], part[4], places, tmp, sign
-' Display a scaled up number as a decimal
-'   Scale it back down by divisor (e.g., 10, 100, 1000, etc)
-    whole := scaled / divisor
-    tmp := divisor
-    places := 0
-    part := 0
-    sign := 0
-    if scaled < 0
-        sign := "-"
-    else
-        sign := " "
+PRI ISR{}
+' Interrupt service routine
+    dira[INT1] := 0                             ' INT1 as input
+    dira[LED1] := 1                             ' LED as output
 
     repeat
-        tmp /= 10
-        places++
-    until tmp == 1
-    scaled //= divisor
-    part := int.deczeroed(||(scaled), places)
+        waitpeq(|< INT1, |< INT1, 0)            ' wait for INT1 (active high)
+        outa[LED1] := 1                         ' light LED
+        _intflag := 1                           '   set flag
 
-    ser.char(sign)
-    ser.dec(||(whole))
-    ser.char(".")
-    ser.str(part)
-    ser.chars(" ", 5)
+        waitpne(|< INT1, |< INT1, 0)            ' now wait for it to clear
+        outa[LED1] := 0                         ' turn off LED
+        _intflag := 0                           '   clear flag
 
 PUB Setup{}
 
@@ -117,10 +120,9 @@ PUB Setup{}
 #endif
     else
         ser.strln(string("LIS3DH driver failed to start - halting"))
-        accel.stop{}
-        time.msleep(5)
-        ser.stop{}
         repeat
+
+    cognew(isr{}, @_isr_stack)                  ' start ISR in another core
 
 DAT
 {

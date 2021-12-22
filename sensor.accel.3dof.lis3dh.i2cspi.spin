@@ -153,12 +153,10 @@ PUB Preset_FreeFall{}
 ' Preset settings for free-fall detection
     acceldatarate(400)
     accelscale(2)
-'xx    freefalltime(30_000)
-'xx    freefallthresh(0_315000)
-'xx    freefallaxisenabled(%111)                   ' all axes
-    accelopmode(ACTIVE)
-'xx    intmask(INT_FFALL)                          ' enable free-fall interrupt
-'xx    introuting(INT_FFALL)                       ' route free-fall ints to INT1
+    freefalltime(100_000)
+    freefallthresh(0_320000)
+    freefallaxisenabled(%10_01_01_01)           ' all axes low
+    int1mask(%01000000)
 
 PUB AccelADCRes(adc_res): curr_res | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
