@@ -18,40 +18,31 @@ This is a P8X32A/Propeller, P2X8C4M64P driver object for the ST LIS3DH 3DoF acce
 * FIFO control and flag reading (empty, full, number of unread samples)
 * Set interrupt sources by mask, set threshold level, read interrupt flags
 * Single and double-click detection
+* Free-fall detection
 
 ## Requirements
 
 P1/SPIN1:
 * spin-standard-library
-* P1/SPIN1/SPI: 1 extra core/cog for the PASM SPI driver
+* P1/SPIN1/SPI: 1 extra core/cog for the PASM SPI engine
  (or)
-* P1/SPIN1/I2C: 1 extra core/cog for the PASM I2C driver
+* P1/SPIN1/I2C: 1 extra core/cog for the PASM I2C engine
 
 P2/SPIN2:
 * p2-spin-standard-library
 
 ## Compiler Compatibility
 
-* P1/SPIN1: OpenSpin (tested with 1.00.81)
-* P2/SPIN2: FlexSpin (tested with 5.0.6-beta)
+* P1/SPIN1 OpenSpin (bytecode): OK, tested with 1.00.81
+* P1/SPIN1 FlexSpin (bytecode): OK, tested with 5.9.4-beta
+* P1/SPIN1 FlexSpin (native): OK, tested with 5.9.4-beta
+* ~~P2/SPIN2 FlexSpin (bytecode): FTBFS, tested with 5.9.4-beta~~
+* P2/SPIN2 FlexSpin (native): OK, tested with 5.9.4-beta
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
 * ~~PNut~~ (incompatible - no preprocessor)
 
 ## Limitations
 
-* Very early in development - may malfunction, or outright fail to build
+* TBD
 
-## TODO
-
-- [x] Implement P2/SPIN2 driver
-- [x] Implement calibration
-- [x] Implement click detection
-- [ ] Implement free-fall detection
-- [ ] Add method to perform self-test
-- [x] Add support for setting interrupt masks and reading flags
-- [ ] Add 3-wire SPI driver variant
-- [x] Add I2C driver variant (combined with SPI driver)
-- [ ] Add support for temperature sensor
-- [ ] Add support for auxilliary ADC
-- [ ] Add support for interrupt pin

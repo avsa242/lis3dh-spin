@@ -1,9 +1,9 @@
 {
     --------------------------------------------
-    Filename: LIS3DH-FreeFallDemo.spin
+    Filename: LIS3DH-FreeFallDemo.spin2
     Author: Jesse Burt
     Description: Demo of the LIS3DH driver
-        Free-fall detection functionality
+        Free-fall detection functionality (P2 version)
     Copyright (c) 2021
     Started Dec 22, 2021
     Updated Dec 22, 2021
@@ -13,21 +13,21 @@
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkfreq    = cfg._clkfreq_def
+    _xtlfreq    = cfg._xtlfreq
 
 ' -- User-modifiable constants
-    LED1        = cfg#LED1
-    SER_BAUD    = 115_200
+    LED1        = cfg.LED1
+    SER_BAUD    = 2_000_000
 
     CS_PIN      = 0                             ' SPI
-    SCL_PIN     = 28                            ' SPI, I2C
-    SDA_PIN     = 29                            ' SPI, I2C
+    SCL_PIN     = 8                             ' SPI, I2C
+    SDA_PIN     = 9                             ' SPI, I2C
     SDO_PIN     = 3                             ' SPI
     I2C_HZ      = 400_000                       ' I2C
     I2C_ADDR    = 0                             ' I2C
 
-    INT1        = 24
+    INT1        = 15
 ' --
 
     DAT_X_COL   = 20
@@ -36,9 +36,8 @@ CON
 
 OBJ
 
-    cfg     : "core.con.boardcfg.flip"
+    cfg     : "core.con.boardcfg.p2eval"
     ser     : "com.serial.terminal.ansi"
-    time    : "time"
     int     : "string.integer"
     accel   : "sensor.accel.3dof.lis3dh.i2cspi"
 
@@ -47,10 +46,10 @@ VAR
     long _isr_stack[50]                         ' stack for ISR core
     long _intflag                               ' interrupt flag
 
-PUB Main{} | intsource
+PUB Main() | intsource
 
-    setup{}
-    accel.preset_freefall{}                     ' default settings, but enable
+    setup()
+    accel.preset_freefall()                     ' default settings, but enable
                                                 ' sensors, set scale factors,
                                                 ' and free-fall parameters
 
@@ -62,54 +61,54 @@ PUB Main{} | intsource
     ' The preset for free-fall detection sets a free-fall threshold of
     '   0.320g's for a minimum time of 100ms. This can be tuned using
     '   accel.FreeFallThresh() and accel.FreeFallTime():
-    accel.freefallthresh(0_320000)              ' 0.315g's
+    accel.freefallthresh(0_320000)              ' 0.320g's
     accel.freefalltime(100_000)                 ' 100_000us/100ms
 
     repeat
         if _intflag                             ' interrupt triggered?
-            intsource := accel.interrupt{}      ' read & clear interrupt flags
-            if (intsource & %01_01_01_01)    ' free-fall event?
+            intsource := accel.interrupt()      ' read & clear interrupt flags
+            if (intsource & %01_01_01_01)       ' free-fall event?
                 ser.position(0, 4)
                 ser.str(string("Sensor in free-fall!"))
-                ser.clearline{}
-                ser.newline{}
+                ser.clearline()
+                ser.newline()
                 ser.str(string("Press any key to reset"))
-                ser.charin{}
+                ser.charin()
                 ser.positionx(0)
-                ser.clearline{}
+                ser.clearline()
                 ser.position(0, 4)
                 ser.str(string("Sensor stable"))
-                ser.clearline{}
-        if ser.rxcheck{} == "c"                 ' press the 'c' key in the demo
-            calibrate{}                         ' to calibrate sensor offsets
+                ser.clearline()
+        if ser.rxcheck() == "c"                 ' press the 'c' key in the demo
+            calibrate()                         ' to calibrate sensor offsets
 
-PUB Calibrate{}
+PUB Calibrate()
 ' Calibrate sensor/set bias offsets
     ser.position(0, 7)
     ser.str(string("Calibrating..."))
-    accel.calibrateaccel{}
+    accel.calibrateaccel()
     ser.positionx(0)
-    ser.clearline{}
+    ser.clearline()
 
-PRI ISR{}
+PRI ISR()
 ' Interrupt service routine
-    dira[INT1] := 0                             ' INT1 as input
-    dira[LED1] := 1                             ' LED as output
+    pinf(INT1)                                  ' INT1 as input
+    pinl(LED1)                                  ' LED as output
 
     repeat
-        waitpeq(|< INT1, |< INT1, 0)            ' wait for INT1 (active high)
-        outa[LED1] := 1                         ' light LED
+        repeat until pinr(INT1) == 1            ' wait for INT1 (active high)
+        pinh(LED1)                              ' light LED
         _intflag := 1                           '   set flag
 
-        waitpne(|< INT1, |< INT1, 0)            ' now wait for it to clear
-        outa[LED1] := 0                         ' turn off LED
+        repeat until pinr(INT1) == 0            ' now wait for it to clear
+        pinl(LED1)                              ' turn off LED
         _intflag := 0                           '   clear flag
 
-PUB Setup{}
+PUB Setup()
 
     ser.start(SER_BAUD)
-    time.msleep(30)
-    ser.clear{}
+    waitms(30)
+    ser.clear()
     ser.strln(string("Serial terminal started"))
 #ifdef LIS3DH_SPI
     if accel.startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN)
@@ -122,7 +121,7 @@ PUB Setup{}
         ser.strln(string("LIS3DH driver failed to start - halting"))
         repeat
 
-    cognew(isr{}, @_isr_stack)                  ' start ISR in another core
+    cogspin(NEWCOG, isr(), @_isr_stack)         ' start ISR in another core
 
 DAT
 {
