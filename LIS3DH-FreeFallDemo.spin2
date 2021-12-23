@@ -6,7 +6,7 @@
         Free-fall detection functionality (P2 version)
     Copyright (c) 2021
     Started Dec 22, 2021
-    Updated Dec 22, 2021
+    Updated Dec 23, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -67,7 +67,7 @@ PUB Main() | intsource
     repeat
         if _intflag                             ' interrupt triggered?
             intsource := accel.interrupt()      ' read & clear interrupt flags
-            if (intsource & %01_01_01_01)       ' free-fall event?
+            if (intsource & %01_01_01)          ' free-fall event?
                 ser.position(0, 4)
                 ser.str(string("Sensor in free-fall!"))
                 ser.clearline()

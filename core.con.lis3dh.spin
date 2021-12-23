@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2021
     Started Mar 15, 2020
-    Updated Dec 22, 2021
+    Updated Dec 23, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -180,8 +180,8 @@ CON
         YLIE_MASK       = (1 << YLIE) ^ INT1_CFG_MASK
         XHIE_MASK       = (1 << XHIE) ^ INT1_CFG_MASK
         XLIE_MASK       = (1 << XLIE) ^ INT1_CFG_MASK
-        FF              = (1 << AOI)
-        WU              = (0 << AOI)
+        FFALL           = (1 << AOI)
+        WKUP            = (0 << AOI)
 
     INT1_SRC            = $31
     INT1_SRC_MASK       = $7F

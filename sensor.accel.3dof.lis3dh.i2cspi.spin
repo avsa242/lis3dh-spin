@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2021
     Started Mar 15, 2020
-    Updated Dec 22, 2021
+    Updated Dec 23, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -155,7 +155,7 @@ PUB Preset_FreeFall{}
     accelscale(2)
     freefalltime(100_000)
     freefallthresh(0_320000)
-    freefallaxisenabled(%10_01_01_01)           ' all axes low
+    freefallaxisenabled(%01_01_01)              ' all axes low
     int1mask(%01000000)
 
 PUB AccelADCRes(adc_res): curr_res | tmp1, tmp2
@@ -586,9 +586,16 @@ PUB FIFOUnreadSamples{}: nr_smp
 
 PUB FreeFallAxisEnabled(mask): curr_mask
 ' Enable free-fall detection, per axis mask
-'   Valid values: %000..%111 (ZYX)
+'   Valid values: %000000..%111111
+'       Bits 5..0:
+'       5: Z-axis high event
+'       4: Z-axis low event
+'       3: Y-axis high event
+'       2: Y-axis low event
+'       1: X-axis high event
+'       0: X-axis low event
 '   Any other value polls the chip and returns the current setting
-    return intmask(mask)
+    return intmask(core#FFALL | mask)           ' set AOI bit for free-fall det
 
 PUB FreeFallThresh(thresh): curr_thr
 ' Set free-fall threshold, in micro-g's
@@ -598,7 +605,18 @@ PUB FreeFallThresh(thresh): curr_thr
 
 PUB FreeFallTime(fftime): curr_time
 ' Set minimum time duration required to recognize free-fall, in microseconds
-'   Valid values: 0..maximum in table below:
+'   Valid values: 0..maximum in table below (dependent on AccelDataRate())
+'       AccelDataRate()     Step        Max
+'           1               1_000_000   127_000_000
+'           10              100_000     12_700_000
+'           25              40_000      5_080_000
+'           50              20_000      2_540_000
+'           100             10_000      1_270_000
+'           200             5_000       635_000
+'           400             2_500       317_500
+'           1600            625         79_375
+'           1344            744         94_494
+'           5376            186         23_623
 '   Any other value polls the chip and returns the current setting
     return int1duration(fftime)
 
