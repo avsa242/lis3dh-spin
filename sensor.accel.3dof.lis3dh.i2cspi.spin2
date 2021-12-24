@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2021
     Started Mar 15, 2020
-    Updated Dec 23, 2021
+    Updated Dec 24, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -751,29 +751,23 @@ PUB IntMask(mask) | tmp
             readreg(core.INT1_CFG, 1, @tmp)
             return tmp
 
-PUB IntThresh(thresh): curr_thr
-' Set interrupt threshold thresh, in micro-g's
+PUB IntThresh(thresh): curr_thr | scl_fact
+' Set interrupt threshold, in micro-g's
 '   Valid values: 0..16_000000
-    curr_thr := 0
-    readreg(core.INT1_THS, 1, @curr_thr)
+    case accelscale(-2)
+        2: scl_fact := 16_000
+        4: scl_fact := 32_000
+        8: scl_fact := 62_000
+        16: scl_fact := 186_000                 ' set scale factor for reg
+
     case thresh
-        0..16_000000:                                       ' 0..16_000000 = 0..16M micro-g's = 0..16 g's
+        0..16_000000:                           ' 0..16.000000g's
+            thresh /= scl_fact                  ' scale to reg range
+            writereg(core.INT1_THS, 1, @thresh)
         other:
-            case accelscale(-2)                             '
-                2: curr_thr *= 16_000                            '
-                4: curr_thr *= 32_000                            '
-                8: curr_thr *= 62_000                            '
-                16: curr_thr *= 186_000                          ' Scale threshold register's 7-bit range
-            return curr_thr                                      '   to micro-g's
-
-    case accelscale(-2)                                     '
-        2: curr_thr := 16_000                                    '
-        4: curr_thr := 32_000                                    '
-        8: curr_thr := 62_000                                    '
-        16: curr_thr := 186_000                                  ' Scale micro-g's to threshold register's
-
-    thresh /= curr_thr                                            '   7-bit range
-    writereg(core.INT1_THS, 1, @thresh)
+            curr_thr := 0
+            readreg(core.INT1_THS, 1, @curr_thr)
+            return (curr_thr * scl_fact)        ' scale to micro-g's
 
 PUB MagBias(x, y, z, rw)
 ' Dummy method
