@@ -9,7 +9,6 @@
     See end of file for terms of use.
     --------------------------------------------
 }
-
 CON
 
 ' Constants used for I2C mode only
@@ -97,6 +96,10 @@ PUB Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): status
             dira[CS_PIN] := 1
             _CS := CS_PIN
             time.msleep(core#TPOR)
+            { if SDA_PIN and SDO_PIN are the same, }
+            { assume 3-wire SPI mode is wanted }
+            if (SDA_PIN == SDO_PIN)
+                spimode(3)
             if deviceid{} == core#WHO_AM_I_RESP
                 return status
     ' if this point is reached, something above failed
@@ -834,6 +837,14 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
     i2c.rdblock_lsbf(ptr_buff, nr_bytes, TRUE)  ' R ...
     i2c.stop{}                                  ' P
 #endif
+
+PRI spiMode(mode) | tmp
+' Set SPI interface to 3 or 4-wire mode
+    if (mode == 3)
+        tmp := core#SPI_3W
+    elseif (mode == 4)
+        tmp := 0
+    writereg(core#CTRL_REG4, 1, @tmp)
 
 PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes from ptr_buff to slave device
