@@ -3,9 +3,9 @@
     Filename: sensor.accel.3dof.lis3dh.spi.spin
     Author: Jesse Burt
     Description: Driver for the ST LIS3DH 3DoF accelerometer
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Mar 15, 2020
-    Updated Dec 24, 2021
+    Updated Apr 9, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -66,6 +66,7 @@ CON
 
 VAR
 
+    long _CS
     long _ares
     long _abias[3], _abiasraw[3]
     byte _sa0
@@ -73,15 +74,14 @@ VAR
 OBJ
 
 #ifdef LIS3DH_SPI
-    spi : "com.spi.bitbang"                     ' PASM SPI engine
+    spi : "com.spi.bitbang-nocs"                ' PASM SPI engine
 #elseifdef LIS3DH_I2C
     i2c : "com.i2c"                             ' PASM I2C engine
 #else
 #error "One of LIS3DH_SPI or LIS3DH_I2C must be defined"
 #endif
-    core: "core.con.lis3dh"
+    core: "core.con.lis3dh"                     ' HW-specific constants
     time: "time"                                ' Basic timing functions
-    io  : "io"
 
 PUB Null{}
 ' This is not a top-level object
@@ -92,8 +92,10 @@ PUB Startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): status
 ' Start using custom I/O pins
     if lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and {
 }   lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31)
-        if (status := spi.init(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, {
-}       core#SPI_MODE))
+        if (status := spi.init(SCL_PIN, SDA_PIN, SDO_PIN, core#SPI_MODE))
+            outa[CS_PIN] := 1
+            dira[CS_PIN] := 1
+            _CS := CS_PIN
             time.msleep(core#TPOR)
             if deviceid{} == core#WHO_AM_I_RESP
                 return status
@@ -817,10 +819,10 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 
 #ifdef LIS3DH_SPI
     reg_nr |= core#R
-    spi.deselectafter(false)
+    outa[_CS] := 0
     spi.wr_byte(reg_nr)
-    spi.deselectafter(true)
     spi.rdblock_lsbf(ptr_buff, nr_bytes)
+    outa[_CS] := 1
 #elseifdef LIS3DH_I2C
     cmd_pkt.byte[0] := SLAVE_WR | _sa0
     cmd_pkt.byte[1] := reg_nr
@@ -840,10 +842,10 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return FALSE
 #ifdef LIS3DH_SPI
-    spi.deselectafter(false)
+    outa[_CS] := 0
     spi.wr_byte(reg_nr)
-    spi.deselectafter(true)
     spi.wrblock_lsbf(ptr_buff, nr_bytes)
+    outa[_CS] := 1
 #elseifdef LIS3DH_I2C
     cmd_pkt.byte[0] := SLAVE_WR | _sa0
     cmd_pkt.byte[1] := reg_nr
