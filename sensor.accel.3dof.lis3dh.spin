@@ -5,10 +5,12 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2022
     Started Mar 15, 2020
-    Updated Apr 9, 2022
+    Updated Apr 21, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
+#include "sensor.imu.common.spinh"
+
 CON
 
 ' Constants used for I2C mode only
@@ -299,13 +301,6 @@ PUB AccelDataReady{}: flag
     readreg(core#STATUS_REG, 1, @flag)
     return (((flag >> core#ZYXDA) & 1) == 1)
 
-PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
-' Reads the Accelerometer output registers and scales the outputs to micro-g's (1_000_000 = 1.000000 g = 9.8 m/s/s)
-    acceldata(@tmpx, @tmpy, @tmpz)
-    long[ptr_x] := tmpx * _ares
-    long[ptr_y] := tmpy * _ares
-    long[ptr_z] := tmpz * _ares
-
 PUB AccelOpMode(mode)
 ' Dummy method
 
@@ -326,64 +321,10 @@ PUB AccelScale(scale): curr_scl
 
     scale := ((curr_scl & core#FS_MASK) | scale)
     writereg(core#CTRL_REG4, 1, @scale)
-{
-PUB AccelSelfTest(enabled) | tmp
-' Enable self-test mode
-'   Valid values: TRUE (-1 or 1), FALSE (0)
-'   Any other value polls the chip and returns the current setting
-    tmp := 0
-    readreg(core#ST_REG, 1, @tmp)
-    case ||(enabled)
-        0, 1:
-            enabled := ||(enabled) << core#
-        other:
-            tmp >>= core#
-            return (tmp & 1) == 1
 
-    tmp &= core#
-    tmp := (tmp | enabled) & core#ST_REG_MASK
-    writereg(core#ST_REG, 1, @tmp)
-}
-
-PUB CalibrateAccel{} | acceltmp[ACCEL_DOF], axis, x, y, z, samples, scale_orig, drate_orig
-' Calibrate the accelerometer
-    longfill(@acceltmp, 0, 10)                  ' init variables to 0
-    drate_orig := acceldatarate(-2)             ' store user-set data rate
-    scale_orig := accelscale(-2)                '   and scale
-
-    accelbias(0, 0, 0, W)                       ' clear existing bias offsets
-
-    acceldatarate(CAL_XL_DR)                    ' set data rate and scale to
-    accelscale(CAL_XL_SCL)                      '   device-specific settings
-    samples := CAL_XL_DR                        ' samples = DR for approx 1sec
-                                                '   worth of data
-    repeat samples
-        repeat until acceldataready{}
-        acceldata(@x, @y, @z)                   ' throw out first set of samples
-
-    repeat samples
-        repeat until acceldataready{}
-        acceldata(@x, @y, @z)                   ' accumulate samples to be
-        acceltmp[X_AXIS] -= x                   '   averaged
-        acceltmp[Y_AXIS] -= y
-        acceltmp[Z_AXIS] -= z - (1_000_000 / _ares)
-
-    ' write the updated offsets
-    accelbias(acceltmp[X_AXIS] / samples, acceltmp[Y_AXIS] / samples, {
-}   acceltmp[Z_AXIS] / samples, W)
-
-    acceldatarate(drate_orig)                   ' restore user settings
-    accelscale(scale_orig)
-
-PUB CalibrateGyro{}
-' Dummy method
-
-PUB CalibrateXLG{}
-
-    calibrateaccel{}
-
-PUB CalibrateMag(samples)
-' Dummy method
+PUB AccelWord2G(accel_word): g
+' Convert from accelerometer ADC word to g's
+    return (accel_word * _ares)
 
 PUB ClickAxisEnabled(mask): curr_mask
 ' Enable click detection per axis, and per click type
@@ -649,13 +590,13 @@ PUB GyroDataRate(hz)
 PUB GyroDataReady
 ' Dummy method
 
-PUB GyroDPS(x, y, z)
-' Dummy method
-
 PUB GyroOpMode(mode)
 ' Dummy method
 
 PUB GyroScale(scale)
+' Dummy method
+
+PUB GyroWord2DPS(gyro_word)
 ' Dummy method
 
 PUB IntActiveState(state): curr_state
@@ -798,13 +739,16 @@ PUB MagDataRate(hz)
 PUB MagDataReady{}
 ' Dummy method
 
-PUB MagGauss(x, y, z)
-' Dummy method
-
 PUB MagOpMode(mode)
 ' Dummy method
 
 PUB MagScale(scale)
+' Dummy method
+
+PUB MagWord2Gauss(mag_word)
+' Dummy method
+
+PUB MagWord2Tesla(mag_word)
 ' Dummy method
 
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
