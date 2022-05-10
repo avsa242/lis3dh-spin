@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer
     Copyright (c) 2022
     Started Mar 15, 2020
-    Updated Apr 21, 2022
+    Updated May 10, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -745,11 +745,23 @@ PUB MagOpMode(mode)
 PUB MagScale(scale)
 ' Dummy method
 
-PUB MagWord2Gauss(mag_word)
-' Dummy method
+PUB MagXWord2Gauss(mag_word): mag_gauss
+' dummy method
 
-PUB MagWord2Tesla(mag_word)
-' Dummy method
+PUB MagYWord2Gauss(mag_word): mag_gauss
+' dummy method
+
+PUB MagZWord2Gauss(mag_word): mag_gauss
+' dummy method
+
+PUB MagXWord2Tesla(mag_word): mag_tesla
+' dummy method
+
+PUB MagYWord2Tesla(mag_word): mag_tesla
+' dummy method
+
+PUB MagZWord2Tesla(mag_word): mag_tesla
+' dummy method
 
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
