@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer (P2 version)
     Copyright (c) 2022
     Started Mar 15, 2020
-    Updated May 10, 2022
+    Updated May 12, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -315,10 +315,6 @@ PUB AccelScale(scale=-2): curr_scl
     scale := ((curr_scl & core.FS_MASK) | scale)
     writereg(core.CTRL_REG4, 1, @scale)
 
-PUB AccelWord2G(accel_word): g
-' Convert from accelerometer ADC word to g's
-    return (accel_word * _ares)
-
 PUB ClickAxisEnabled(mask=-2): curr_mask
 ' Enable click detection per axis, and per click type
 '   Valid values:
@@ -589,9 +585,6 @@ PUB GyroOpMode(mode=-2)
 PUB GyroScale(scale=-2)
 ' Dummy method
 
-PUB GyroWord2DPS(gyro_word)
-' Dummy method
-
 PUB IntActiveState(state=-2): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (0), HIGH (1)
@@ -737,24 +730,6 @@ PUB MagOpMode(mode=-2)
 
 PUB MagScale(scale=-2)
 ' Dummy method
-
-PUB MagXWord2Gauss(mag_word): mag_gauss
-' dummy method
-
-PUB MagYWord2Gauss(mag_word): mag_gauss
-' dummy method
-
-PUB MagZWord2Gauss(mag_word): mag_gauss
-' dummy method
-
-PUB MagXWord2Tesla(mag_word): mag_tesla
-' dummy method
-
-PUB MagYWord2Tesla(mag_word): mag_tesla
-' dummy method
-
-PUB MagZWord2Tesla(mag_word): mag_tesla
-' dummy method
 
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
