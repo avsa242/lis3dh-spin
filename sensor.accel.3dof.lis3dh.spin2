@@ -1,6 +1,6 @@
 {
     --------------------------------------------
-    Filename: sensor.accel.3dof.lis3dh.spi.spin2
+    Filename: sensor.accel.3dof.lis3dh.spin2
     Author: Jesse Burt
     Description: Driver for the ST LIS3DH 3DoF accelerometer (P2 version)
     Copyright (c) 2022
