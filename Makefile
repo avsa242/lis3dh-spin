@@ -8,6 +8,9 @@ P1BAUD=115200
 #P2DEV=
 P2BAUD=2000000
 
+# Build options
+BUILDOPTS=
+
 # P1, P2 compilers
 #P1BUILD=openspin
 P1BUILD=flexspin --interp=rom
@@ -41,22 +44,22 @@ p2click: loadp2click
 
 # Build binaries
 LIS3DH-Demo.binary: LIS3DH-Demo.spin $(SPIN1_DRIVER_FN) $(CORE_FN)
-	$(P1BUILD) $(SPIN1_LIB_PATH) -b -D $(IFACE) LIS3DH-Demo.spin
+	$(P1BUILD) $(SPIN1_LIB_PATH) -b -D $(IFACE) $(BUILDOPTS) LIS3DH-Demo.spin
 
 LIS3DH-Demo.bin2: LIS3DH-Demo.spin2 $(SPIN2_DRIVER_FN) $(CORE_FN)
-	$(P2BUILD) $(SPIN2_LIB_PATH) -b -2 -D $(IFACE) -o LIS3DH-Demo.bin2 LIS3DH-Demo.spin2
+	$(P2BUILD) $(SPIN2_LIB_PATH) -b -2 -D $(IFACE) $(BUILDOPTS) -o LIS3DH-Demo.bin2 LIS3DH-Demo.spin2
 
 LIS3DH-ClickDemo.binary: LIS3DH-ClickDemo.spin $(SPIN1_DRIVER_FN) $(CORE_FN)
-	$(P1BUILD) $(SPIN1_LIB_PATH) -b -D $(IFACE) LIS3DH-ClickDemo.spin
+	$(P1BUILD) $(SPIN1_LIB_PATH) -b -D $(IFACE) $(BUILDOPTS) LIS3DH-ClickDemo.spin
 
 LIS3DH-ClickDemo.bin2: LIS3DH-ClickDemo.spin2 $(SPIN2_DRIVER_FN) $(CORE_FN)
-	$(P2BUILD) $(SPIN2_LIB_PATH) -b -2 -D $(IFACE) -o LIS3DH-ClickDemo.bin2 LIS3DH-ClickDemo.spin2
+	$(P2BUILD) $(SPIN2_LIB_PATH) -b -2 -D $(IFACE) $(BUILDOPTS) -o LIS3DH-ClickDemo.bin2 LIS3DH-ClickDemo.spin2
 
 LIS3DH-FreeFallDemo.binary: LIS3DH-FreeFallDemo.spin $(SPIN1_DRIVER_FN) $(CORE_FN)
-	$(P1BUILD) $(SPIN1_LIB_PATH) -b -D $(IFACE) LIS3DH-FreeFallDemo.spin
+	$(P1BUILD) $(SPIN1_LIB_PATH) -b -D $(IFACE) $(BUILDOPTS) LIS3DH-FreeFallDemo.spin
 
 LIS3DH-FreeFallDemo.bin2: LIS3DH-FreeFallDemo.spin2 $(SPIN2_DRIVER_FN) $(CORE_FN)
-	$(P2BUILD) $(SPIN2_LIB_PATH) -b -2 -D $(IFACE) -o LIS3DH-FreeFallDemo.bin2 LIS3DH-FreeFallDemo.spin2
+	$(P2BUILD) $(SPIN2_LIB_PATH) -b -2 -D $(IFACE) $(BUILDOPTS) -o LIS3DH-FreeFallDemo.bin2 LIS3DH-FreeFallDemo.spin2
 
 # Load binaries to RAM (will build first, if necessary)
 loadp1demo: LIS3DH-Demo.binary
