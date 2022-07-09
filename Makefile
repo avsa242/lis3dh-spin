@@ -1,6 +1,6 @@
 # lis3dh-spin Makefile - requires GNU Make, or compatible
 # Variables below can be overridden on the command line
-#	e.g. make IFACE=LIS3DH_SPI3W LIS3DH-Demo.binary
+#	e.g. make IFACE=LIS3DH_SPI LIS3DH-Demo.binary
 
 # P1, P2 device nodes and baudrates
 #P1DEV=
@@ -12,14 +12,13 @@ P2BAUD=2000000
 BUILDOPTS=
 
 # P1, P2 compilers
-#P1BUILD=openspin
+#P1BUILD=flexspin
 P1BUILD=flexspin --interp=rom
 P2BUILD=flexspin -2
 
-# LIS3DH interface: I2C, SPI-3wire or SPI-4wire
+# LIS3DH interface: I2C, SPI
 IFACE=LIS3DH_I2C
-#IFACE=LIS3DH_SPI3W
-#IFACE=LIS3DH_SPI4W
+#IFACE=LIS3DH_SPI
 
 # Paths to spin-standard-library, and p2-spin-standard-library,
 #  if not specified externally
