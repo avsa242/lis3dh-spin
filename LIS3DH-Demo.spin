@@ -37,7 +37,8 @@ CON
     MOSI_PIN    = 2                             ' SDA
     MISO_PIN    = 3                             ' SDO
 '   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
-'   the driver will attempt to start in 3-wire SPI mode.' --
+'   the driver will attempt to start in 3-wire SPI mode.
+' --
 
 OBJ
 
@@ -67,7 +68,7 @@ PUB Setup{}
 
     demo{}
 
-#include "imudemo-common.spinh"                 ' code common to all IMU demos
+#include "imudemo.common.spinh"                 ' code common to all IMU demos
 
 DAT
 {
