@@ -221,7 +221,7 @@ CON
     ACT_THS             = $3E
     ACT_DUR             = $3F
 
-PUB Null{}
+PUB null{}
 ' This is not a top-level object
 
 DAT
