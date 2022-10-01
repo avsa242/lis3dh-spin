@@ -6,7 +6,7 @@
         click-detection functionality
     Copyright (c) 2022
     Started Jul 11, 2020
-    Updated Aug 17, 2022
+    Updated Oct 1, 2022
     See end of file for terms of use.
     --------------------------------------------
 
@@ -23,7 +23,6 @@ CON
     _xinfreq    = cfg#_xinfreq
 
 ' -- User-modifiable constants
-    LED1        = cfg#LED1
     SER_BAUD    = 115_200
 
     { I2C configuration }
@@ -48,7 +47,7 @@ OBJ
     time    : "time"
     accel   : "sensor.accel.3dof.lis3dh"
 
-PUB Main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
+PUB main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
 
     setup{}
     accel.preset_clickdet{}                     ' preset settings for
@@ -56,8 +55,8 @@ PUB Main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_cli
 
     ser.hidecursor{}                            ' hide terminal cursor
 
-    repeat until ser.rxcheck{} == "q"           ' press q to quit
-        click_src := accel.clickedint{}
+    repeat until (ser.rxcheck{} == "q")         ' press q to quit
+        click_src := accel.clicked_int{}
         int_act := ((click_src >> 6) & 1)
         dclicked := ((click_src >> 5) & 1)
         sclicked := ((click_src >> 4) & 1)
@@ -75,7 +74,7 @@ PUB Main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_cli
     ser.showcursor{}                            ' restore terminal cursor
     repeat
 
-PRI YesNo(val): resp
+PRI yesno(val): resp
 ' Return pointer to string "Yes" or "No" depending on value called with
     case val
         0:
@@ -83,7 +82,7 @@ PRI YesNo(val): resp
         1:
             return string("Yes")
 
-PUB Setup{}
+PUB setup{}
 
     ser.start(SER_BAUD)
     time.msleep(30)
