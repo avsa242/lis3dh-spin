@@ -68,6 +68,7 @@ CON
 VAR
 
     long _CS
+    long _accel_time_res
     byte _addr_bits
 
 OBJ
@@ -280,6 +281,7 @@ PUB accel_data_rate(rate): curr_rate
     readreg(core#CTRL_REG1, 1, @curr_rate)
     case rate
         0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600:
+            _accel_time_res := (1_000000 / rate)
             rate := lookdownz(rate: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600) << core#ODR
         other:
             curr_rate := (curr_rate >> core#ODR) & core#ODR_BITS
@@ -363,12 +365,11 @@ PUB click_int_ena(state): curr_state
 PUB click_latency{}: ltime | time_res
 ' Get maximum elapsed interval between start of click and end of click
 '   Returns: microseconds
-    time_res := 1_000000 / accel_data_rate(-2)  ' res. = (1 / data rate)
     ltime := 0
     readreg(core#TIME_LATENCY, 1, @ltime)
-    return (ltime * time_res)
+    return (ltime * _accel_time_res)
 
-PUB click_set_latency(ltime) | time_res
+PUB click_set_latency(ltime)
 ' Set maximum elapsed interval between start of click and end of click, in uSec
 '   (i.e., time from set click_thresh() exceeded to falls back below threshold)
 '   Valid values:
@@ -384,8 +385,7 @@ PUB click_set_latency(ltime) | time_res
 '       1600            625                         .. 159_375         0.625 .. 159.375
 '   NOTE: Minimum unit is dependent on the current accel_data_rate()
 '   NOTE: ST application note example uses accel_data_rate(400)
-    time_res := 1_000000 / accel_data_rate(-2)  ' res. = (1 / data rate)
-    ltime := ((0 #> ltime <# (time_res * 255)) / time_res)
+    ltime := ((0 #> ltime <# (_accel_time_res * 255)) / _accel_time_res)
     writereg(core#TIME_LATENCY, 1, @ltime)
 
 PUB click_thresh{}: thresh | ares
@@ -412,11 +412,10 @@ PUB click_set_thresh(thresh) | ares
 PUB click_time{}: ctime | time_res
 ' Get maximum elapsed interval between start of click and end of click
 '   Returns: microseconds
-    time_res := 1_000000 / accel_data_rate(-2)  ' res. = (1 / data rate)
     readreg(core#TIME_LIMIT, 1, @ctime)
-    return (ctime * time_res)
+    return (ctime * _accel_time_res)
 
-PUB click_set_time(ctime) | time_res
+PUB click_set_time(ctime)
 ' Set maximum elapsed interval between start of click and end of click, in uSec
 '   (i.e., time from set click_set_thresh() exceeded to falls back below threshold)
 '   Valid values:
@@ -432,8 +431,7 @@ PUB click_set_time(ctime) | time_res
 '       1600            625                         .. 79_375               79
 '   NOTE: Minimum unit is dependent on the current accel_data_rate()
 '   NOTE: ST application note example uses AccelDataRate(400)
-    time_res := 1_000000 / accel_data_rate(-2)  ' res. = (1 / data rate)
-    ctime := ((0 #> ctime <# (time_res * 127)) / time_res)
+    ctime := ((0 #> ctime <# (_accel_time_res * 127)) / _accel_time_res)
     writereg(core#TIME_LIMIT, 1, @ctime)
 
 PUB dev_id{}: id
@@ -442,15 +440,14 @@ PUB dev_id{}: id
     id := 0
     readreg(core#WHO_AM_I, 1, @id)
 
-PUB dbl_click_win{}: dctime | time_res
+PUB dbl_click_win{}: dctime
 ' Get maximum elapsed interval between two consecutive clicks
 '   Returns: microseconds
     dctime := 0
-    time_res := 1_000000 / accel_data_rate(-2)  ' res. = (1 / data rate)
     readreg(core#TIME_WINDOW, 1, @dctime)
-    return (dctime * time_res)
+    return (dctime * _accel_time_res)
 
-PUB dbl_click_set_win(dctime) | time_res
+PUB dbl_click_set_win(dctime)
 ' Set maximum elapsed interval between two consecutive clicks, in uSec
 '   Valid values:
 '       accel_data_rate()   Min time (uS/step size) Max time (uS)   (equiv. range in mS)
@@ -465,8 +462,7 @@ PUB dbl_click_set_win(dctime) | time_res
 '       1600                625                     159_375         0.625 .. 159.375
 '   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
 '   NOTE: ST application note example uses AccelDataRate(400)
-    time_res := 1_000000 / accel_data_rate(-2)  ' res. = (1 / data rate)
-    dctime := ((0 #> dctime <# (time_res * 255)) / time_res)
+    dctime := ((0 #> dctime <# (_accel_time_res * 255)) / _accel_time_res)
     writereg(core#TIME_WINDOW, 1, @dctime)
 
 PUB fifo_ena(state): curr_state
@@ -594,14 +590,13 @@ PUB int_polarity(state): curr_state
     state := ((curr_state & core#INT_POL_MASK) | state)
     writereg(core#CTRL_REG6, 1, @state)
 
-PUB int1_duration{}: dur | lsb
+PUB int1_duration{}: dur
 ' Get duration a condition must be verified in order to assert an interrupt
     dur := 0
-    lsb := (1_000000 / accel_data_rate(-2))     ' calc LSB in microseconds
     readreg(core#INT1_DUR, 1, @dur)             ' read and convert to usec
-    return (dur * lsb)
+    return (dur * _accel_time_res)
 
-PUB int1_set_duration(dur) | lsb
+PUB int1_set_duration(dur)
 ' Set duration a condition must be verified in order to assert an interrupt
 '   Valid values:
 '       accel_data_rate()   Step        Max
@@ -616,8 +611,7 @@ PUB int1_set_duration(dur) | lsb
 '           1344            744         94_494
 '           5376            186         23_623
 '   Any other value polls the chip and returns the current setting
-    lsb := (1_000000 / accel_data_rate(-2))     ' calc LSB in microseconds
-    dur := (0 #> dur <# (lsb * 127)) / lsb      ' convert to LSB and write
+    dur := (0 #> dur <# (_accel_time_res * 127)) / _accel_time_res
     writereg(core#INT1_DUR, 1, @dur)
 
 PUB int1_latch_ena(state): curr_state
