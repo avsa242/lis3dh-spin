@@ -42,7 +42,7 @@ CON
 
 OBJ
 
-    cfg: "core.con.boardcfg.flip"
+    cfg: "boardcfg.flip"
     accel: "sensor.accel.3dof.lis3dh"
     ser: "com.serial.terminal.ansi"
     time: "time"
