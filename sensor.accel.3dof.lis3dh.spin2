@@ -5,7 +5,7 @@
     Description: Driver for the ST LIS3DH 3DoF accelerometer (P2 version)
     Copyright (c) 2022
     Started Mar 15, 2020
-    Updated Oct 1, 2022
+    Updated Oct 30, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -73,7 +73,7 @@ OBJ
 
 { SPI? }
 #ifdef LIS3DH_SPI
-    spi : "com.spi.10mhz"                     ' bitbanged SPI engine
+    spi : "com.spi.10mhz"                       ' SPI engine
 #else
 { no, not SPI - default to I2C }
 #define LIS3DH_I2C
