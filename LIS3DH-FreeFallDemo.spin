@@ -1,29 +1,35 @@
 {
-    --------------------------------------------
-    Filename: LIS3DH-FreeFallDemo.spin
-    Author: Jesse Burt
-    Description: Demo of the LIS3DH driver
-        Free-fall detection functionality
-    Copyright (c) 2022
-    Started Dec 22, 2021
-    Updated Nov 5, 2022
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DLIS3DH_SPI
-        -DLIS3DH_SPI_BC
-        -DLIS3DH_I2C (default if none specified)
-        -DLIS3DH_I2C_BC
+----------------------------------------------------------------------------------------------------
+    Filename:       LIS3DH-FreeFallDemo.spin
+    Description:    Demo of the LIS3DH driver
+        * Free-fall detection functionality
+    Author:         Jesse Burt
+    Started:        Dec 22, 2021
+    Updated:        Jun 21, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
+' Uncomment the following two lines to use the driver in SPI mode
+'#define LIS3DH_SPI
+'#pragma exportdef(LIS3DH_SPI)
+
+' Uncomment the following two lines to use the driver with a bytecode-based SPI engine
+'#define LIS3DH_SPI_BC
+'#pragma exportdef(LIS3DH_SPI_BC)
+
+' Uncomment the following two lines to use the driver with a bytecode-based I2C engine
+'#define LIS3DH_I2C_BC
+'#pragma exportdef(LIS3DH_I2C_BC)
+
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = cfg._clkmode
+    _xinfreq    = cfg._xinfreq
 
 ' -- User-modifiable constants
-    LED1        = cfg#LED1
+    LED1        = cfg.LED1
     SER_BAUD    = 115_200
 
     { I2C configuration }
@@ -39,7 +45,7 @@ CON
     MISO_PIN    = 3                             ' SDO
     INT1        = 24
 
-'   NOTE: If LIS3DH_SPI is #defined, and SDA_PIN and SDO_PIN are the same,
+'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
 '   the driver will attempt to start in 3-wire SPI mode.
 ' --
 
@@ -47,63 +53,68 @@ CON
     DAT_Y_COL   = DAT_X_COL + 15
     DAT_Z_COL   = DAT_Y_COL + 15
 
+
 OBJ
 
-    cfg     : "boardcfg.flip"
-    ser     : "com.serial.terminal.ansi"
-    time    : "time"
-    accel   : "sensor.accel.3dof.lis3dh"
+    cfg:    "boardcfg.flip"
+    ser:    "com.serial.terminal.ansi"
+    time:   "time"
+    accel:  "sensor.accel.3dof.lis3dh"
+
 
 VAR
 
     long _isr_stack[50]                         ' stack for ISR core
     long _intflag                               ' interrupt flag
 
-PUB main{} | intsource
 
-    setup{}
-    accel.preset_freefall{}                     ' default settings, but enable
+PUB main() | intsource
+
+    setup()
+    accel.preset_freefall()                     ' default settings, but enable
                                                 ' sensors, set scale factors,
                                                 ' and free-fall parameters
 
     ser.pos_xy(0, 3)
-    ser.puts(string("Waiting for free-fall condition..."))
+    ser.puts(@"Waiting for free-fall condition...")
 
     ' When the sensor detects free-fall, a message is displayed and
     '   is cleared after the user presses a key
     ' The preset for free-fall detection sets a free-fall threshold of
     '   0.320g's for a minimum time of 100ms. This can be tuned using
     '   accel.freefall_set_thresh() and accel.freefall_set_time():
-    accel.freefall_set_thresh(0_320000)         ' 0.315g's
+    accel.freefall_set_thresh(0_320000)         ' 0.320g's
     accel.freefall_set_time(100_000)            ' 100_000us/100ms
 
     repeat
         if (_intflag)                           ' interrupt triggered?
-            intsource := accel.accel_int{}      ' read & clear interrupt flags
+            intsource := accel.accel_int()      ' read & clear interrupt flags
             if (intsource & %01_01_01)          ' free-fall event?
                 ser.pos_xy(0, 4)
-                ser.puts(string("Sensor in free-fall!"))
-                ser.clear_line{}
-                ser.newline{}
-                ser.puts(string("Press any key to reset"))
-                ser.getchar{}
+                ser.puts(@"Sensor in free-fall!")
+                ser.clear_line()
+                ser.newline()
+                ser.puts(@"Press any key to reset")
+                ser.getchar()
                 ser.pos_x(0)
-                ser.clear_line{}
+                ser.clear_line()
                 ser.pos_xy(0, 4)
-                ser.puts(string("Sensor stable"))
-                ser.clear_line{}
-        if (ser.rxcheck{} == "c")               ' press the 'c' key in the demo
-            calibrate{}                         ' to calibrate sensor offsets
+                ser.puts(@"Sensor stable")
+                ser.clear_line()
+        if (ser.getchar_noblock() == "c")       ' press the 'c' key in the demo
+            calibrate()                         ' to calibrate sensor offsets
 
-PUB calibrate{}
+
+PUB calibrate()
 ' Calibrate sensor/set bias offsets
     ser.pos_xy(0, 7)
-    ser.str(string("Calibrating..."))
-    accel.calibrate_accel{}
+    ser.str(@"Calibrating...")
+    accel.calibrate_accel()
     ser.pos_x(0)
-    ser.clear_line{}
+    ser.clear_line()
 
-PRI cog_isr{}
+
+PRI cog_isr()
 ' Interrupt service routine
     dira[INT1] := 0                             ' INT1 as input
     dira[LED1] := 1                             ' LED as output
@@ -117,28 +128,30 @@ PRI cog_isr{}
         outa[LED1] := 0                         ' turn off LED
         _intflag := 0                           '   clear flag
 
-PUB setup{}
+
+PUB setup()
 
     ser.start(SER_BAUD)
     time.msleep(30)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
+    ser.clear()
+    ser.strln(@"Serial terminal started")
 #ifdef LIS3DH_SPI
     if accel.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN)
-        ser.strln(string("LIS3DH driver started (SPI)"))
+        ser.strln(@"LIS3DH driver started (SPI)")
 #else
     if accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS)
-        ser.strln(string("LIS3DH driver started (I2C)"))
+        ser.strln(@"LIS3DH driver started (I2C)")
 #endif
     else
-        ser.strln(string("LIS3DH driver failed to start - halting"))
+        ser.strln(@"LIS3DH driver failed to start - halting")
         repeat
 
-    cognew(cog_isr{}, @_isr_stack)                  ' start ISR in another core
+    cognew(cog_isr(), @_isr_stack)                  ' start ISR in another core
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

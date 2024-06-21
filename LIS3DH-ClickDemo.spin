@@ -1,26 +1,32 @@
 {
-    --------------------------------------------
-    Filename: LIS3DH-ClickDemo.spin
-    Author: Jesse Burt
-    Description: Demo of the LIS3DH driver
-        click-detection functionality
-    Copyright (c) 2022
-    Started Jul 11, 2020
-    Updated Nov 5, 2022
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DLIS3DH_SPI
-        -DLIS3DH_SPI_BC
-        -DLIS3DH_I2C (default if none specified)
-        -DLIS3DH_I2C_BC
+----------------------------------------------------------------------------------------------------
+    Filename:       LIS3DH-ClickDemo.spin
+    Description:    Demo of the LIS3DH driver
+        * click-detection functionality
+    Author:         Jesse Burt
+    Started:        Jul 11, 2020
+    Updated:        Jun 21, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
+' Uncomment the following two lines to use the driver in SPI mode
+'#define LIS3DH_SPI
+'#pragma exportdef(LIS3DH_SPI)
+
+' Uncomment the following two lines to use the driver with a bytecode-based SPI engine
+'#define LIS3DH_SPI_BC
+'#pragma exportdef(LIS3DH_SPI_BC)
+
+' Uncomment the following two lines to use the driver with a bytecode-based I2C engine
+'#define LIS3DH_I2C_BC
+'#pragma exportdef(LIS3DH_I2C_BC)
+
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = cfg._clkmode
+    _xinfreq    = cfg._xinfreq
 
 ' -- User-modifiable constants
     SER_BAUD    = 115_200
@@ -40,23 +46,25 @@ CON
 '   the driver will attempt to start in 3-wire SPI mode.
 ' --
 
+
 OBJ
 
-    cfg     : "boardcfg.flip"
-    ser     : "com.serial.terminal.ansi"
-    time    : "time"
-    accel   : "sensor.accel.3dof.lis3dh"
+    cfg:    "boardcfg.flip"
+    time:   "time"
+    ser:    "com.serial.terminal.ansi"
+    accel:  "sensor.accel.3dof.lis3dh"
 
-PUB main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
 
-    setup{}
-    accel.preset_clickdet{}                     ' preset settings for
+PUB main() | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
+
+    setup()
+    accel.preset_clickdet()                     ' preset settings for
                                                 ' click-detection
 
-    ser.hide_cursor{}                           ' hide terminal cursor
+    ser.hide_cursor()                           ' hide terminal cursor
 
-    repeat until (ser.rx_check{} == "q")        ' press q to quit
-        click_src := accel.clicked_int{}
+    repeat until (ser.rx_check() == "q")        ' press q to quit
+        click_src := accel.clicked_int()
         int_act := ((click_src >> 6) & 1)
         dclicked := ((click_src >> 5) & 1)
         sclicked := ((click_src >> 4) & 1)
@@ -64,44 +72,47 @@ PUB main{} | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_cli
         y_clicked := ((click_src >> 1) & 1)
         x_clicked := (click_src & 1)
         ser.pos_xy(0, 3)
-        ser.printf1(string("Click interrupt: %s\n\r"), yesno(int_act))
-        ser.printf1(string("Double-clicked:  %s\n\r"), yesno(dclicked))
-        ser.printf1(string("Single-clicked:  %s\n\r"), yesno(sclicked))
-        ser.printf1(string("Z-axis clicked:  %s\n\r"), yesno(z_clicked))
-        ser.printf1(string("Y-axis clicked:  %s\n\r"), yesno(y_clicked))
-        ser.printf1(string("X-axis clicked:  %s\n\r"), yesno(x_clicked))
+        ser.printf1(@"Click interrupt: %s\n\r", yesno(int_act))
+        ser.printf1(@"Double-clicked:  %s\n\r", yesno(dclicked))
+        ser.printf1(@"Single-clicked:  %s\n\r", yesno(sclicked))
+        ser.printf1(@"Z-axis clicked:  %s\n\r", yesno(z_clicked))
+        ser.printf1(@"Y-axis clicked:  %s\n\r", yesno(y_clicked))
+        ser.printf1(@"X-axis clicked:  %s\n\r", yesno(x_clicked))
 
-    ser.show_cursor{}                           ' restore terminal cursor
+    ser.show_cursor()                           ' restore terminal cursor
     repeat
+
 
 PRI yesno(val): resp
 ' Return pointer to string "Yes" or "No" depending on value called with
     case val
         0:
-            return string("No ")
+            return @"No "
         1:
-            return string("Yes")
+            return @"Yes"
 
-PUB setup{}
+
+PUB setup()
 
     ser.start(SER_BAUD)
     time.msleep(30)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
+    ser.clear()
+    ser.strln(@"Serial terminal started")
 #ifdef LIS3DH_SPI
     if accel.startx(CS_PIN, SCK_PIN, MOSI_PIN, MOSI_PIN)
-        ser.strln(string("LIS3DH driver started (SPI)"))
+        ser.strln(@"LIS3DH driver started (SPI)")
 #else
     if accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS)
-        ser.strln(string("LIS3DH driver started (I2C)"))
+        ser.strln(@"LIS3DH driver started (I2C)")
 #endif
     else
-        ser.strln(string("LIS3DH driver failed to start - halting"))
+        ser.strln(@"LIS3DH driver failed to start - halting")
         repeat
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

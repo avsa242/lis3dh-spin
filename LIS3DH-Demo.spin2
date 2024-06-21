@@ -1,19 +1,19 @@
 {
-    --------------------------------------------
-    Filename: LIS3DH-Demo.spin2
-    Author: Jesse Burt
-    Description: LIS3DH driver demo (P2 version)
+----------------------------------------------------------------------------------------------------
+    Filename:       LIS3DH-Demo.spin2
+    Description:    LIS3DH driver demo
         * 3DoF data output
-    Copyright (c) 2022
-    Started Aug 12, 2017
-    Updated Nov 20, 2022
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DLIS3DH_SPI
-        -DLIS3DH_I2C (default if none specified)
+    Author:         Jesse Burt
+    Started:        Mar 15, 2020
+    Updated:        Jun 21, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
+' Uncomment the following two lines to use the driver in SPI mode
+#define LIS3DH_SPI
+#pragma exportdef(LIS3DH_SPI)
+
 #include "core.con.click.spin2"
 
 CON
@@ -47,11 +47,13 @@ CON
 '   the driver will attempt to start in 3-wire SPI mode.
 ' --
 
+
 OBJ
 
-    cfg: "boardcfg.p2eval"
+    cfg:    "boardcfg.p2eval"
     sensor: "sensor.accel.3dof.lis3dh"
-    ser: "com.serial.terminal.ansi"
+    ser:    "com.serial.terminal.ansi"
+
 
 PUB setup()
 
@@ -75,14 +77,15 @@ PUB setup()
     repeat
         ser.pos_xy(0, 3)
         show_accel_data()
-        if (ser.rx_check() == "c")
+        if ( ser.rx_check() == "c" )
             cal_accel()
 
 #include "acceldemo.common.spin2h"                ' code common to all IMU demos
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

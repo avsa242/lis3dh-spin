@@ -1,26 +1,32 @@
 {
-    --------------------------------------------
-    Filename: LIS3DH-Demo.spin
-    Author: Jesse Burt
-    Description: LIS3DH driver demo
+----------------------------------------------------------------------------------------------------
+    Filename:       LIS3DH-Demo.spin
+    Description:    LIS3DH driver demo
         * 3DoF data output
-    Copyright (c) 2022
-    Started Aug 12, 2017
-    Updated Nov 20, 2022
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DLIS3DH_SPI
-        -DLIS3DH_SPI_BC
-        -DLIS3DH_I2C (default if none specified)
-        -DLIS3DH_I2C_BC
+    Author:         Jesse Burt
+    Started:        Mar 15, 2020
+    Updated:        Jun 21, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
+' Uncomment the following two lines to use the driver in SPI mode
+#define LIS3DH_SPI
+#pragma exportdef(LIS3DH_SPI)
+
+' Uncomment the following two lines to use the driver with a bytecode-based SPI engine
+#define LIS3DH_SPI_BC
+#pragma exportdef(LIS3DH_SPI_BC)
+
+' Uncomment the following two lines to use the driver with a bytecode-based I2C engine
+#define LIS3DH_I2C_BC
+#pragma exportdef(LIS3DH_I2C_BC)
+
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = cfg._clkmode
+    _xinfreq    = cfg._xinfreq
 
 ' -- User-modifiable constants
     SER_BAUD    = 115_200
@@ -40,43 +46,46 @@ CON
 '   the driver will attempt to start in 3-wire SPI mode.
 ' --
 
+
 OBJ
 
-    cfg: "boardcfg.flip"
+    cfg:    "boardcfg.flip"
     sensor: "sensor.accel.3dof.lis3dh"
-    ser: "com.serial.terminal.ansi"
-    time: "time"
+    ser:    "com.serial.terminal.ansi"
+    time:   "time"
 
-PUB setup{}
+
+PUB setup()
 
     ser.start(SER_BAUD)
     time.msleep(10)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
+    ser.clear()
+    ser.strln(@"Serial terminal started")
 
 #ifdef LIS3DH_SPI
     if (sensor.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN))
 #else
     if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS))
 #endif
-        ser.strln(string("LIS3DH driver started"))
+        ser.strln(@"LIS3DH driver started")
     else
-        ser.strln(string("LIS3DH driver failed to start - halting"))
+        ser.strln(@"LIS3DH driver failed to start - halting")
         repeat
 
-    sensor.preset_active{}
+    sensor.preset_active()
 
     repeat
         ser.pos_xy(0, 3)
-        show_accel_data{}
-        if (ser.rx_check{} == "c")
-            cal_accel{}
+        show_accel_data()
+        if ( ser.rx_check() == "c" )
+            cal_accel()
 
 #include "acceldemo.common.spinh"                 ' code common to all IMU demos
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

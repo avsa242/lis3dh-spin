@@ -1,14 +1,14 @@
 {
-    --------------------------------------------
-    Filename: sensor.accel.3dof.lis3dh.spin2
-    Author: Jesse Burt
-    Description: Driver for the ST LIS3DH 3DoF accelerometer (P2 version)
-    Copyright (c) 2022
-    Started Mar 15, 2020
-    Updated Nov 5, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       sensor.accel.3dof.lis3dh.spin2
+    Description:    Driver for the ST LIS3DH 3DoF accelerometer
+    Author:         Jesse Burt
+    Started:        Mar 15, 2020
+    Updated:        Jun 21, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
 #include "sensor.accel.common.spin2h"
 
 CON
@@ -63,11 +63,13 @@ CON
     HIGH            = 0
     LOW             = 1
 
+
 VAR
 
     long _CS
     long _accel_time_res
     byte _addr_bits
+
 
 OBJ
 
@@ -81,17 +83,18 @@ OBJ
 #endif
     core: "core.con.lis3dh"
 
+
 PUB null()
 ' This is not a top-level object
 
 #ifdef LIS3DH_SPI
 
+
 PUB startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_HZ=1_000_000): status
 ' Start using custom I/O pins
-    if lookdown(CS_PIN: 0..63) and lookdown(SCL_PIN: 0..63) and {
-}   lookdown(SDA_PIN: 0..63) and lookdown(SDO_PIN: 0..63)
-        if (status := spi.init(SCL_PIN, SDA_PIN, SDO_PIN, core.SPI_MODE, {
-}       SCL_HZ))
+    if lookdown(CS_PIN: 0..63) and lookdown(SCL_PIN: 0..63) and ...
+        lookdown(SDA_PIN: 0..63) and lookdown(SDO_PIN: 0..63)
+        if (status := spi.init(SCL_PIN, SDA_PIN, SDO_PIN, core.SPI_MODE, SCL_HZ))
             _CS := CS_PIN
             pinh(_CS)
             waitms(core.TPOR)
@@ -108,10 +111,10 @@ PUB startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN, SCL_HZ=1_000_000): status
 
 #elseifdef LIS3DH_I2C
 
+
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 ' Start using custom IO pins and I2C bus frequency
-    if lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and {
-}   I2C_HZ <= core.I2C_MAX_FREQ
+    if lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and I2C_HZ <= core.I2C_MAX_FREQ
         if status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ)
             _addr_bits := (abs(ADDR_BITS <> 0)) << 1
             waitms (core.TPOR)
@@ -123,6 +126,7 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
     return FALSE
 #endif
 
+
 PUB stop()
 ' Stop the driver
 #ifdef LIS3DH_SPI
@@ -131,11 +135,13 @@ PUB stop()
     i2c.deinit()
 #endif
 
+
 PUB defaults()
 ' Factory defaults
     accel_scale(2)
     accel_data_rate(0)
     accel_axis_ena(%111)
+
 
 PUB preset_active()
 ' Like defaults(), but
@@ -143,6 +149,7 @@ PUB preset_active()
     accel_scale(2)
     accel_data_rate(50)
     accel_axis_ena(%111)
+
 
 PUB preset_clickdet()
 ' Presets for click-detection
@@ -157,6 +164,7 @@ PUB preset_clickdet()
     click_set_latency(150_000)
     click_int_ena(TRUE)
 
+
 PUB preset_freefall()
 ' Preset settings for free-fall detection
     accel_data_rate(400)
@@ -165,6 +173,7 @@ PUB preset_freefall()
     freefall_set_thresh(0_320000)
     freefall_axis_ena(%01_01_01)              ' all axes low
     int1_set_mask(%01000000)
+
 
 PUB accel_adc_res(adc_res=-2): curr_res | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
@@ -197,6 +206,7 @@ PUB accel_adc_res(adc_res=-2): curr_res | tmp1, tmp2
     writereg(core.CTRL_REG1, 1, @tmp1)
     writereg(core.CTRL_REG4, 1, @tmp2)
 
+
 PUB accel_axis_ena(mask=-2): curr_mask
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:
@@ -214,12 +224,14 @@ PUB accel_axis_ena(mask=-2): curr_mask
     mask := ((curr_mask & core.XYZEN_MASK) | mask)
     writereg(core.CTRL_REG1, 1, @mask)
 
+
 PUB accel_bias(x, y, z)
 ' Read accelerometer calibration offset values
 '   x, y, z: pointers to copy offsets to
     long[x] := _abias[X_AXIS]
     long[y] := _abias[Y_AXIS]
     long[z] := _abias[Z_AXIS]
+
 
 PUB accel_data(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read the accelerometer output registers
@@ -234,6 +246,7 @@ PUB accel_data(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] -= _abias[Y_AXIS]
     long[ptr_z] -= _abias[Z_AXIS]
 
+
 PUB accel_data_overrun(): flag
 ' Flag indicating previously acquired data has been overwritten
 '   Returns:
@@ -246,6 +259,7 @@ PUB accel_data_overrun(): flag
     flag := 0
     readreg(core.STATUS_REG, 1, @flag)
     return ((flag >> core.X_OR) & %1111)
+
 
 PUB accel_data_rate(rate=-2): curr_rate
 ' Set accelerometer output data rate, in rate
@@ -265,12 +279,14 @@ PUB accel_data_rate(rate=-2): curr_rate
     rate := ((curr_rate & core.ODR_MASK) | rate)
     writereg(core.CTRL_REG1, 1, @rate)
 
+
 PUB accel_data_rdy(): flag
 ' Flagt indicating data is ready
 '   Returns: TRUE (-1) if data ready, FALSE otherwise
     flag := 0
     readreg(core.STATUS_REG, 1, @flag)
     return (((flag >> core.ZYXDA) & 1) == 1)
+
 
 PUB accel_int(): state
 ' Read interrupt state
@@ -285,6 +301,7 @@ PUB accel_int(): state
     state := 0
     readreg(core.INT1_SRC, 1, @state)
 
+
 PUB accel_int_mask(): mask
 ' Get interrupt mask
 '   Bits:  7..0
@@ -298,6 +315,7 @@ PUB accel_int_mask(): mask
 '       0: X-axis low event
     mask := 0
     readreg(core.INT1_CFG, 1, @mask)
+
 
 PUB accel_int_polarity(state=-2): curr_state
 ' Set interrupt pin active state/logic level
@@ -315,6 +333,7 @@ PUB accel_int_polarity(state=-2): curr_state
     state := ((curr_state & core.INT_POL_MASK) | state)
     writereg(core.CTRL_REG6, 1, @state)
 
+
 PUB accel_int_set_mask(mask)
 ' Set interrupt mask
 '   Bits:  7..0
@@ -330,6 +349,7 @@ PUB accel_int_set_mask(mask)
     mask &= %1111_1111
     writereg(core.INT1_CFG, 1, @mask)
 
+
 PUB accel_int_thresh(): thresh | scl_fact
 ' Get interrupt threshold
 '   Returns: micro-g's
@@ -343,6 +363,7 @@ PUB accel_int_thresh(): thresh | scl_fact
     readreg(core.INT1_THS, 1, @thresh)
     return (thresh * scl_fact)                  ' scale to micro-g's
 
+
 PUB accel_int_set_thresh(thresh) | scl_fact
 ' Set interrupt threshold, in micro-g's
 '   Valid values: 0..16_000000
@@ -355,6 +376,7 @@ PUB accel_int_set_thresh(thresh) | scl_fact
     { 0..16g's input; scale down to register range }
     thresh := ((0 #> thresh <# 16_000000) / scl_fact)
     writereg(core.INT1_THS, 1, @thresh)
+
 
 PUB accel_scale(scale=-2): curr_scl
 ' Set measurement range of the accelerometer, in g's
@@ -374,6 +396,7 @@ PUB accel_scale(scale=-2): curr_scl
     scale := ((curr_scl & core.FS_MASK) | scale)
     writereg(core.CTRL_REG4, 1, @scale)
 
+
 PUB accel_set_bias(x, y, z)
 ' Write accelerometer calibration offset values
 '   Valid values:
@@ -381,6 +404,7 @@ PUB accel_set_bias(x, y, z)
     _abias[X_AXIS] := -32768 #> x <# 32767
     _abias[Y_AXIS] := -32768 #> y <# 32767
     _abias[Z_AXIS] := -32768 #> z <# 32767
+
 
 PUB click_axis_ena(mask=-2): curr_mask
 ' Enable click detection per axis, and per click type
@@ -398,12 +422,14 @@ PUB click_axis_ena(mask=-2): curr_mask
             readreg(core.CLICK_CFG, 1, @curr_mask)
             return
 
+
 PUB clicked(): flag
 ' Flag indicating the sensor was single or double-clicked
 '   Returns: TRUE (-1) if sensor was single-clicked or double-clicked
 '            FALSE (0) otherwise
     flag := 0
     return (((clicked_int() >> core.SCLICK) & %11) <> 0)
+
 
 PUB clicked_int(): status
 ' Clicked interrupt status
@@ -417,6 +443,7 @@ PUB clicked_int(): status
 '       0: X-axis clicked
     status := 0
     readreg(core.CLICK_SRC, 1, @status)
+
 
 PUB click_int_ena(state=-2): curr_state
 ' Enable click interrupts on INT1
@@ -433,12 +460,14 @@ PUB click_int_ena(state=-2): curr_state
     state := ((curr_state & core.I1_CLICK_MASK) | state)
     writereg(core.CTRL_REG3, 1, @state)
 
+
 PUB click_latency(): ltime
 ' Get maximum elapsed interval between start of click and end of click
 '   Returns: microseconds
     ltime := 0
     readreg(core.TIME_LATENCY, 1, @ltime)
     return (ltime * _accel_time_res)
+
 
 PUB click_set_latency(ltime)
 ' Set maximum elapsed interval between start of click and end of click, in uSec
@@ -459,6 +488,7 @@ PUB click_set_latency(ltime)
     ltime := ((0 #> ltime <# (_accel_time_res * 255)) / _accel_time_res)
     writereg(core.TIME_LATENCY, 1, @ltime)
 
+
 PUB click_thresh(): thresh | ares
 ' Get threshold for recognizing a click
 '   Returns: micro-g's
@@ -466,6 +496,7 @@ PUB click_thresh(): thresh | ares
     thresh := 0
     readreg(core.CLICK_THS, 1, @thresh)
     return (thresh * ares)
+
 
 PUB click_set_thresh(thresh) | ares
 ' Set threshold for recognizing a click, in micro-g's
@@ -480,12 +511,14 @@ PUB click_set_thresh(thresh) | ares
     thresh := ((0 #> thresh <# (127 * ares)) / ares)
     writereg(core.CLICK_THS, 1, @thresh)
 
+
 PUB click_time(): ctime
 ' Get maximum elapsed interval between start of click and end of click
 '   Returns: microseconds
     ctime := 0
     readreg(core.TIME_LIMIT, 1, @ctime)
     return (ctime * _accel_time_res)
+
 
 PUB click_set_time(ctime)
 ' Set maximum elapsed interval between start of click and end of click, in uSec
@@ -506,11 +539,13 @@ PUB click_set_time(ctime)
     ctime := ((0 #> ctime <# (_accel_time_res * 127)) / _accel_time_res)
     writereg(core.TIME_LIMIT, 1, @ctime)
 
+
 PUB dev_id(): id
 ' Read device identification
 '   Returns: $33
     id := 0
     readreg(core.WHO_AM_I, 1, @id)
+
 
 PUB dbl_click_win(): dctime
 ' Get maximum elapsed interval between two consecutive clicks
@@ -518,6 +553,7 @@ PUB dbl_click_win(): dctime
     dctime := 0
     readreg(core.TIME_WINDOW, 1, @dctime)
     return (dctime * _accel_time_res)
+
 
 PUB dbl_click_set_win(dctime)
 ' Set maximum elapsed interval between two consecutive clicks, in uSec
@@ -537,6 +573,7 @@ PUB dbl_click_set_win(dctime)
     dctime := ((0 #> dctime <# (_accel_time_res * 255)) / _accel_time_res)
     writereg(core.TIME_WINDOW, 1, @dctime)
 
+
 PUB fifo_ena(state=-2): curr_state
 ' Enable FIFO memory
 '   Valid values: FALSE (0), TRUE(1 or -1)
@@ -552,6 +589,7 @@ PUB fifo_ena(state=-2): curr_state
     state := ((curr_state & core.FIFO_EN_MASK) | state)
     writereg(core.CTRL_REG5, 1, @state)
 
+
 PUB fifo_empty(): flag
 ' Flag indicating FIFO is empty
 '   Returns: FALSE (0): FIFO contains at least one sample, TRUE(-1): FIFO is empty
@@ -559,12 +597,14 @@ PUB fifo_empty(): flag
     readreg(core.FIFO_SRC_REG, 1, @flag)
     return (((flag >> core.EMPTY) & 1) == 1)
 
+
 PUB fifo_full(): flag
 ' Flag indicating FIFO is full
 '   Returns: FALSE (0): FIFO contains less than 32 samples, TRUE(-1): FIFO contains 32 samples
     flag := 0
     readreg(core.FIFO_SRC_REG, 1, @flag)
     return (((flag >> core.OVRN_FIFO) & 1) == 1)
+
 
 PUB fifo_mode(mode=-2): curr_mode
 ' Set FIFO behavior
@@ -585,6 +625,7 @@ PUB fifo_mode(mode=-2): curr_mode
     mode := ((curr_mode & core.FM_MASK) | mode)
     writereg(core.FIFO_CTRL_REG, 1, @mode)
 
+
 PUB fifo_thresh(thresh=-2): curr_thr
 ' Set FIFO threshold level
 '   Valid values: 1..32
@@ -600,12 +641,14 @@ PUB fifo_thresh(thresh=-2): curr_thr
     thresh := ((curr_thr & core.FTH_MASK) | thresh)
     writereg(core.FIFO_CTRL_REG, 1, @thresh)
 
+
 PUB fifo_nr_unread(): nr_smp
 ' Number of unread samples stored in FIFO
 '   Returns: 0..32
     nr_smp := 0
     readreg(core.FIFO_SRC_REG, 1, @nr_smp)
     nr_smp &= core.FSS
+
 
 PUB freefall_axis_ena(mask=-2): curr_mask
 ' Enable free-fall detection, per axis mask
@@ -620,20 +663,24 @@ PUB freefall_axis_ena(mask=-2): curr_mask
 '   Any other value polls the chip and returns the current setting
     accel_int_set_mask(core.FFALL | mask)       ' set AOI bit for free-fall det
 
-PUB freefall_thresh{}: curr_thr
+
+PUB freefall_thresh(): curr_thr
 ' Get free-fall threshold
 '   Returns: micro-g's
-    return accel_int_thresh{}
+    return accel_int_thresh()
+
 
 PUB freefall_set_thresh(thresh)
 ' Set free-fall threshold, in micro-g's
 '   Valid values: 0..8_001000 (0..8g's; clamped to range)
     accel_int_set_thresh(thresh)
 
+
 PUB freefall_time(): fftime
 ' Get minimum time duration required to recognize free-fall
 '   Returns: microseconds
-    return int1_duration{}
+    return int1_duration()
+
 
 PUB freefall_set_time(fftime)
 ' Set minimum time duration required to recognize free-fall, in microseconds
@@ -651,11 +698,13 @@ PUB freefall_set_time(fftime)
 '       5376                186         23_623
     int1_set_duration(fftime)
 
+
 PUB int1_duration(): dur
 ' Get duration a condition must be verified in order to assert an interrupt
     dur := 0
     readreg(core.INT1_DUR, 1, @dur)             ' read and convert to usec
     return (dur * _accel_time_res)
+
 
 PUB int1_set_duration(dur)
 ' Set duration a condition must be verified in order to assert an interrupt
@@ -675,6 +724,7 @@ PUB int1_set_duration(dur)
     dur := (0 #> dur <# (_accel_time_res * 127)) / _accel_time_res
     writereg(core.INT1_DUR, 1, @dur)
 
+
 PUB int1_latch_ena(state=-2): curr_state
 ' Latch interrupts on INT1 pin
 '   Valid values: TRUE (-1 or 1), FALSE (0)
@@ -690,6 +740,7 @@ PUB int1_latch_ena(state=-2): curr_state
     state := ((curr_state & core.LIR_INT1_MASK) | state)
     writereg(core.CTRL_REG5, 1, @state)
 
+
 PUB int1_mask(): mask
 ' Get INT1 mask
 '   Bit 7654321 (0 disables an interrupt, 1 enables)
@@ -703,6 +754,7 @@ PUB int1_mask(): mask
 '       0: -- unused/ignored --
     mask := 0
     readreg(core.CTRL_REG3, 1, @mask)
+
 
 PUB int1_set_mask(mask)
 ' Set INT1 mask
@@ -718,6 +770,7 @@ PUB int1_set_mask(mask)
     mask &= %1111_1110
     writereg(core.CTRL_REG3, 1, @mask)
 
+
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
     case reg_nr
@@ -729,7 +782,7 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
             reg_nr |= core.MS_I2C               ' multi-byte read mode (I2C)
 #endif
         other:
-            return FALSE
+            return
 
 #ifdef LIS3DH_SPI
     reg_nr |= core.R
@@ -749,20 +802,22 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
     i2c.stop()                                  ' P
 #endif
 
+
 PRI spimode(mode) | tmp
 ' Set SPI interface to 3 or 4-wire mode
     if (mode == 3)
-        tmp := core#SPI_3W
+        tmp := core.SPI_3W
     elseif (mode == 4)
         tmp := 0
-    writereg(core#CTRL_REG4, 1, @tmp)
+    writereg(core.CTRL_REG4, 1, @tmp)
+
 
 PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes from ptr_buff to slave device
     case reg_nr
         $1E..$26, $2E, $30, $32..$34, $36..$38, $3A..$3F:
         other:
-            return FALSE
+            return
 #ifdef LIS3DH_SPI
     pinl(_CS)
     spi.wr_byte(reg_nr)
@@ -778,9 +833,10 @@ PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
     i2c.stop()
 #endif
 
+
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
