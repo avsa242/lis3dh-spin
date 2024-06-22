@@ -13,7 +13,47 @@
 
 CON
 
-' Constants used for I2C mode only
+    { default I/O configuration - these can be overridden by the parent object }
+    ' I2C
+    SCL             = 28
+    SDA             = 29
+    I2C_FREQ        = 100_000
+    I2C_ADDR        = 0
+
+    ' SPI
+    CS              = 0
+    SCK             = 1
+    MOSI            = 2
+    MISO            = 3
+    SPI_FREQ        = 1_000_000
+
+
+    ' ADC resolution symbols
+    LOWPOWER        = 8
+    NORMAL          = 10
+    FULL            = 12
+
+    ' XYZ axis constants used throughout the driver
+    X_AXIS          = 0
+    Y_AXIS          = 1
+    Z_AXIS          = 2
+
+    ' Operating modes (dummy)
+    STANDBY         = 0
+    MEASURE         = 1
+
+    ' FIFO modes
+    BYPASS          = %00
+    FIFO            = %01
+    STREAM          = %10
+    STREAM2FIFO     = %11
+
+    ' Interrupt active state
+    HIGH            = 0
+    LOW             = 1
+
+
+    ' Constants used for I2C mode only
     SLAVE_WR        = core.SLAVE_ADDR
     SLAVE_RD        = core.SLAVE_ADDR|1
 
@@ -22,15 +62,15 @@ CON
     DEF_HZ          = 100_000
     I2C_MAX_FREQ    = core.I2C_MAX_FREQ
 
-' Indicate to user apps how many Degrees of Freedom each sub-sensor has
-'   (also imply whether or not it has a particular sensor)
+    ' Indicate to user apps how many Degrees of Freedom each sub-sensor has
+    '   (also imply whether or not it has a particular sensor)
     ACCEL_DOF       = 3
     GYRO_DOF        = 0
     MAG_DOF         = 0
     BARO_DOF        = 0
     DOF             = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
 
-' Scales and data rates used during calibration/bias/offset process
+    ' Scales and data rates used during calibration/bias/offset process
     CAL_XL_SCL      = 2
     CAL_G_SCL       = 0
     CAL_M_SCL       = 0
@@ -40,30 +80,6 @@ CON
 
     R               = 0
     W               = 1
-
-' ADC resolution symbols
-    LOWPOWER        = 8
-    NORMAL          = 10
-    FULL            = 12
-
-' XYZ axis constants used throughout the driver
-    X_AXIS          = 0
-    Y_AXIS          = 1
-    Z_AXIS          = 2
-
-' Operating modes (dummy)
-    STANDBY         = 0
-    MEASURE         = 1
-
-' FIFO modes
-    BYPASS          = %00
-    FIFO            = %01
-    STREAM          = %10
-    STREAM2FIFO     = %11
-
-' Interrupt active state
-    HIGH            = 0
-    LOW             = 1
 
 
 VAR
@@ -75,29 +91,36 @@ VAR
 
 OBJ
 
+{ if only the bytecode SPI symbol was defined, define the one for SPI as well }
+#ifdef LIS3DH_SPI_BC
+#   ifndef LIS3DH_SPI
+#       define LIS3DH_SPI
+#   endif
+#endif
+
 { SPI? }
 #ifdef LIS3DH_SPI
 { decide: Bytecode SPI engine, or PASM? Default is PASM if BC isn't specified }
-#ifdef LIS3DH_SPI_BC
-    spi : "com.spi.25khz.nocog"                 ' BC SPI engine
-#else
-    spi : "com.spi.4mhz"                        ' PASM SPI engine
-#endif
+#   ifdef LIS3DH_SPI_BC
+        spi:    "com.spi.25khz.nocog"           ' BC SPI engine
+#   else
+        spi:    "com.spi.4mhz"                  ' PASM SPI engine
+#   endif
 
 #else
 
 { no, not SPI - default to I2C }
 #define LIS3DH_I2C
 { decide: Bytecode I2C engine, or PASM? Default is PASM if BC isn't specified }
-#ifdef LIS3DH_I2C_BC
-    i2c : "com.i2c.nocog"                       ' BC I2C engine
-#else
-    i2c : "com.i2c"                             ' PASM I2C engine
-#endif
+#   ifdef LIS3DH_I2C_BC
+        i2c:    "com.i2c.nocog"                 ' BC I2C engine
+#   else
+        i2c:    "com.i2c"                       ' PASM I2C engine
+#   endif
 
 #endif
-    core: "core.con.lis3dh"                     ' HW-specific constants
-    time: "time"                                ' Basic timing functions
+    core:       "core.con.lis3dh"               ' HW-specific constants
+    time:       "time"                          ' Basic timing functions
 
 
 PUB null()
@@ -105,21 +128,25 @@ PUB null()
 
 #ifdef LIS3DH_SPI
 
+PUB start(): status
+' Start the driver using default I/O settings
+    return startx(CS, SCK, MOSI, MISO)
+
 
 PUB startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): status
 ' Start using custom I/O pins
-    if lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and ...
-    lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31)
-        if (status := spi.init(SCL_PIN, SDA_PIN, SDO_PIN, core.SPI_MODE))
+    if ( lookdown(CS_PIN: 0..31) and lookdown(SCL_PIN: 0..31) and ...
+    lookdown(SDA_PIN: 0..31) and lookdown(SDO_PIN: 0..31) )
+        if ( status := spi.init(SCL_PIN, SDA_PIN, SDO_PIN, core.SPI_MODE) )
             outa[CS_PIN] := 1
             dira[CS_PIN] := 1
             _CS := CS_PIN
             time.msleep(core.TPOR)
             { if SDA_PIN and SDO_PIN are the same, }
             { assume 3-wire SPI mode is wanted }
-            if (SDA_PIN == SDO_PIN)
+            if ( SDA_PIN == SDO_PIN )
                 spimode(3)
-            if (dev_id() == core.WHO_AM_I_RESP)
+            if ( dev_id() == core.WHO_AM_I_RESP )
                 return status
     ' if this point is reached, something above failed
     ' Re-check I/O pin assignments, bus speed, connections, power
@@ -128,18 +155,18 @@ PUB startx(CS_PIN, SCL_PIN, SDA_PIN, SDO_PIN): status
 
 #elseifdef LIS3DH_I2C
 
-PUB start(): okay
+PUB start(): status
 ' Start using "standard" Propeller I2C pins, and 100kHz
-    return startx(DEF_SCL, DEF_SDA, DEF_HZ, 0)
+    return startx(SCL, SDA, I2C_FREQ, I2C_ADDR)
 
 
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 ' Start using custom IO pins and I2C bus frequency
-    if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and I2C_HZ =< core.I2C_MAX_FREQ
-        if status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ)
+    if ( lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) )
+        if ( status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ) )
             _addr_bits := (||(ADDR_BITS <> 0)) << 1
             time.msleep (core.TPOR)
-            if (dev_id() == core.WHO_AM_I_RESP)
+            if ( dev_id() == core.WHO_AM_I_RESP )
                 return status
     ' if this point is reached, something above failed
     ' Re-check I/O pin assignments, bus speed, connections, power

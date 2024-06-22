@@ -28,43 +28,27 @@ CON
     _clkmode    = cfg._clkmode
     _xinfreq    = cfg._xinfreq
 
-' -- User-modifiable constants
-    SER_BAUD    = 115_200
-
-    { I2C configuration }
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_FREQ    = 400_000                       ' max is 400_000
-    ADDR_BITS   = 0                             ' 0, 1
-
-    { SPI configuration }
-    CS_PIN      = 0
-    SCK_PIN     = 1                             ' SCL
-    MOSI_PIN    = 2                             ' SDA
-    MISO_PIN    = 3                             ' SDO
-'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
-'   the driver will attempt to start in 3-wire SPI mode.
-' --
-
 
 OBJ
 
     cfg:    "boardcfg.flip"
     time:   "time"
-    ser:    "com.serial.terminal.ansi"
-    accel:  "sensor.accel.3dof.lis3dh"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=0, ...
+                                            {SPI} CS=0, SCK=1, MOSI=2, MISO=3, SPI_FREQ=1_000_000
+'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
+'   the driver will attempt to start in 3-wire SPI mode.
 
 
 PUB main() | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
 
     setup()
-    accel.preset_clickdet()                     ' preset settings for
-                                                ' click-detection
+    sensor.preset_clickdet()                    ' preset settings for click-detection
 
     ser.hide_cursor()                           ' hide terminal cursor
 
-    repeat until (ser.rx_check() == "q")        ' press q to quit
-        click_src := accel.clicked_int()
+    repeat until (ser.getchar_noblock() == "q") ' press q to quit
+        click_src := sensor.clicked_int()
         int_act := ((click_src >> 6) & 1)
         dclicked := ((click_src >> 5) & 1)
         sclicked := ((click_src >> 4) & 1)
@@ -94,17 +78,12 @@ PRI yesno(val): resp
 
 PUB setup()
 
-    ser.start(SER_BAUD)
+    ser.start()
     time.msleep(30)
     ser.clear()
     ser.strln(@"Serial terminal started")
-#ifdef LIS3DH_SPI
-    if accel.startx(CS_PIN, SCK_PIN, MOSI_PIN, MOSI_PIN)
-        ser.strln(@"LIS3DH driver started (SPI)")
-#else
-    if accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS)
-        ser.strln(@"LIS3DH driver started (I2C)")
-#endif
+    if ( sensor.start() )
+        ser.strln(@"LIS3DH driver started")
     else
         ser.strln(@"LIS3DH driver failed to start - halting")
         repeat

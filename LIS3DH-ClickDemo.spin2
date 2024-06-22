@@ -16,58 +16,43 @@
 
 #include "core.con.click.spin2"
 
-
 CON
 
     _clkfreq    = cfg._clkfreq_def
     _xtlfreq    = cfg._xtlfreq
 
 ' -- User-modifiable constants
-    SER_BAUD    = 2_000_000
-
     CLICK_BASE  = 0
-
-    { I2C configuration }
-    { custom I/O pin definitions - uncomment the below, and comment out the #include
-        line above to use }
-'    SCL_PIN     = 0
-'    SDA_PIN     = 1
-    I2C_FREQ    = 400_000                       ' max is 400_000
-    ADDR_BITS   = 0                             ' 0, 1
-
-    { SPI configuration }
-    { custom I/O pin definitions - uncomment the below, and comment out the #include
-        line above to use }
-'    CS_PIN      = 0
-'    SCK_PIN     = 1                             ' SCL
-'    MOSI_PIN    = 2                             ' SDA
-'    MISO_PIN    = 3                             ' SDO
-    SPI_FREQ    = 10_000_000                    ' max is 10_000_000
-
-    INT1        = 15
-
-'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
-'   the driver will attempt to start in 3-wire SPI mode.
 ' --
 
 
 OBJ
 
     cfg:    "boardcfg.p2eval"
-    ser:    "com.serial.terminal.ansi"
-    accel:  "sensor.accel.3dof.lis3dh"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
+
+    { for MikroE click boards - modify CLICK_BASE symbol above only }
+    sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=SCL_PIN, SDA=SDA_PIN, ...
+                                                    I2C_FREQ=400_000, I2C_ADDR=0, ...
+                                            {SPI} CS=CS_PIN, SCK=SCK_PIN, MOSI=MOSI_PIN, ...
+                                                    MISO=MISO_PIN, SPI_FREQ=1_000_000
+
+    { for custom I/O pin assignments - modify pin numbers below as needed }
+'    sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=0, SDA=1, I2C_FREQ=400_000, I2C_ADDR=0, ...
+'                                            {SPI} CS=0, SCK=1, MOSI=2, MISO=3, SPI_FREQ=1_000_000
+'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
+'   the driver will attempt to start in 3-wire SPI mode.
 
 
 PUB main() | click_src, int_act, dclicked, sclicked, z_clicked, y_clicked, x_clicked
 
     setup()
-    accel.preset_clickdet()                     ' preset settings for
-                                                ' click-detection
+    sensor.preset_clickdet()                    ' preset settings for click-detection
 
     ser.hide_cursor()                           ' hide terminal cursor
 
-    repeat until (ser.rx_check() == "q")        ' press q to quit
-        click_src := accel.clicked_int()
+    repeat until (ser.getchar_noblock() == "q") ' press q to quit
+        click_src := sensor.clicked_int()
         int_act := ((click_src >> 6) & 1)
         dclicked := ((click_src >> 5) & 1)
         sclicked := ((click_src >> 4) & 1)
@@ -97,17 +82,12 @@ PRI yesno(val): resp
 
 PUB setup()
 
-    ser.start(SER_BAUD)
-    waitms(30)
+    ser.start()
+
     ser.clear()
     ser.strln(@"Serial terminal started")
-#ifdef LIS3DH_SPI
-    if accel.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN, SPI_FREQ)
-        ser.strln(@"LIS3DH driver started (SPI)")
-#else
-    if accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS)
-        ser.strln(@"LIS3DH driver started (I2C)")
-#endif
+    if ( sensor.start() )
+        ser.strln(@"LIS3DH driver started")
     else
         ser.strln(@"LIS3DH driver failed to start - halting")
         repeat

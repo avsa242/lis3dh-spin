@@ -30,36 +30,19 @@ CON
 
 ' -- User-modifiable constants
     LED1        = cfg.LED1
-    SER_BAUD    = 115_200
-
-    { I2C configuration }
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_FREQ    = 400_000                       ' max is 400_000
-    ADDR_BITS   = 0                             ' 0, 1
-
-    { SPI configuration }
-    CS_PIN      = 0
-    SCK_PIN     = 1                             ' SCL
-    MOSI_PIN    = 2                             ' SDA
-    MISO_PIN    = 3                             ' SDO
     INT1        = 24
-
-'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
-'   the driver will attempt to start in 3-wire SPI mode.
 ' --
-
-    DAT_X_COL   = 20
-    DAT_Y_COL   = DAT_X_COL + 15
-    DAT_Z_COL   = DAT_Y_COL + 15
 
 
 OBJ
 
     cfg:    "boardcfg.flip"
-    ser:    "com.serial.terminal.ansi"
     time:   "time"
-    accel:  "sensor.accel.3dof.lis3dh"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=0, ...
+                                            {SPI} CS=0, SCK=1, MOSI=2, MISO=3, SPI_FREQ=1_000_000
+'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
+'   the driver will attempt to start in 3-wire SPI mode.
 
 
 VAR
@@ -71,7 +54,7 @@ VAR
 PUB main() | intsource
 
     setup()
-    accel.preset_freefall()                     ' default settings, but enable
+    sensor.preset_freefall()                     ' default settings, but enable
                                                 ' sensors, set scale factors,
                                                 ' and free-fall parameters
 
@@ -82,13 +65,13 @@ PUB main() | intsource
     '   is cleared after the user presses a key
     ' The preset for free-fall detection sets a free-fall threshold of
     '   0.320g's for a minimum time of 100ms. This can be tuned using
-    '   accel.freefall_set_thresh() and accel.freefall_set_time():
-    accel.freefall_set_thresh(0_320000)         ' 0.320g's
-    accel.freefall_set_time(100_000)            ' 100_000us/100ms
+    '   sensor.freefall_set_thresh() and sensor.freefall_set_time():
+    sensor.freefall_set_thresh(0_320000)         ' 0.320g's
+    sensor.freefall_set_time(100_000)            ' 100_000us/100ms
 
     repeat
         if (_intflag)                           ' interrupt triggered?
-            intsource := accel.accel_int()      ' read & clear interrupt flags
+            intsource := sensor.accel_int()      ' read & clear interrupt flags
             if (intsource & %01_01_01)          ' free-fall event?
                 ser.pos_xy(0, 4)
                 ser.puts(@"Sensor in free-fall!")
@@ -109,7 +92,7 @@ PUB calibrate()
 ' Calibrate sensor/set bias offsets
     ser.pos_xy(0, 7)
     ser.str(@"Calibrating...")
-    accel.calibrate_accel()
+    sensor.calibrate_accel()
     ser.pos_x(0)
     ser.clear_line()
 
@@ -131,17 +114,12 @@ PRI cog_isr()
 
 PUB setup()
 
-    ser.start(SER_BAUD)
+    ser.start()
     time.msleep(30)
     ser.clear()
     ser.strln(@"Serial terminal started")
-#ifdef LIS3DH_SPI
-    if accel.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN)
-        ser.strln(@"LIS3DH driver started (SPI)")
-#else
-    if accel.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS)
-        ser.strln(@"LIS3DH driver started (I2C)")
-#endif
+    if ( sensor.start() )
+        ser.strln(@"LIS3DH driver started")
     else
         ser.strln(@"LIS3DH driver failed to start - halting")
         repeat

@@ -1,7 +1,7 @@
 {
 ----------------------------------------------------------------------------------------------------
     Filename:       LIS3DH-Demo.spin
-    Description:    LIS3DH driver demo
+    Description:    Demo of the LIS3DH driver
         * 3DoF data output
     Author:         Jesse Burt
     Started:        Mar 15, 2020
@@ -11,16 +11,16 @@
 }
 
 ' Uncomment the following two lines to use the driver in SPI mode
-#define LIS3DH_SPI
-#pragma exportdef(LIS3DH_SPI)
+'#define LIS3DH_SPI
+'#pragma exportdef(LIS3DH_SPI)
 
 ' Uncomment the following two lines to use the driver with a bytecode-based SPI engine
-#define LIS3DH_SPI_BC
-#pragma exportdef(LIS3DH_SPI_BC)
+'#define LIS3DH_SPI_BC
+'#pragma exportdef(LIS3DH_SPI_BC)
 
 ' Uncomment the following two lines to use the driver with a bytecode-based I2C engine
-#define LIS3DH_I2C_BC
-#pragma exportdef(LIS3DH_I2C_BC)
+'#define LIS3DH_I2C_BC
+'#pragma exportdef(LIS3DH_I2C_BC)
 
 
 CON
@@ -28,45 +28,26 @@ CON
     _clkmode    = cfg._clkmode
     _xinfreq    = cfg._xinfreq
 
-' -- User-modifiable constants
-    SER_BAUD    = 115_200
-
-    { I2C configuration }
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_FREQ    = 400_000                       ' max is 400_000
-    ADDR_BITS   = 0                             ' 0, 1
-
-    { SPI configuration }
-    CS_PIN      = 0
-    SCK_PIN     = 1                             ' SCL
-    MOSI_PIN    = 2                             ' SDA
-    MISO_PIN    = 3                             ' SDO
-'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
-'   the driver will attempt to start in 3-wire SPI mode.
-' --
-
 
 OBJ
 
     cfg:    "boardcfg.flip"
-    sensor: "sensor.accel.3dof.lis3dh"
-    ser:    "com.serial.terminal.ansi"
     time:   "time"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=0, ...
+                                            {SPI} CS=0, SCK=1, MOSI=2, MISO=3, SPI_FREQ=1_000_000
+'   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
+'   the driver will attempt to start in 3-wire SPI mode.
 
 
 PUB setup()
 
-    ser.start(SER_BAUD)
-    time.msleep(10)
+    ser.start()
+    time.msleep(30)
     ser.clear()
     ser.strln(@"Serial terminal started")
 
-#ifdef LIS3DH_SPI
-    if (sensor.startx(CS_PIN, SCK_PIN, MOSI_PIN, MISO_PIN))
-#else
-    if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS))
-#endif
+    if ( sensor.start() )
         ser.strln(@"LIS3DH driver started")
     else
         ser.strln(@"LIS3DH driver failed to start - halting")
