@@ -4,7 +4,7 @@
     Description:    LIS3DH-specific constants
     Author:         Jesse Burt
     Started:        Mar 15, 2020
-    Updated:        Jun 21, 2024
+    Updated:        Jun 22, 2024
     Copyright (c) 2024 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -19,8 +19,8 @@ CON
     SPI_MODE            = 0
     SCK_MAX_FREQ        = 10_000_000    ' P2/SPIN2
 
-    W                   = 0
-    R                   = 1 << 7
+    WRITE_BIT           = 0
+    READ_BIT            = 1 << 7
     MS_SPI              = 1 << 6
     MS_I2C              = 1 << 7
 

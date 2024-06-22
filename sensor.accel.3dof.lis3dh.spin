@@ -4,7 +4,7 @@
     Description:    Driver for the ST LIS3DH 3DoF accelerometer
     Author:         Jesse Burt
     Started:        Mar 15, 2020
-    Updated:        Jun 21, 2024
+    Updated:        Jun 22, 2024
     Copyright (c) 2024 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -266,11 +266,10 @@ PUB accel_axis_ena(mask): curr_mask
     case mask
         %000..%111:
             mask := (mask >< 3) & core.XYZEN_BITS
+            mask := ((curr_mask & core.XYZEN_MASK) | mask)
+            writereg(core.CTRL_REG1, 1, @mask)
         other:
             return curr_mask & core.XYZEN_BITS
-
-    mask := ((curr_mask & core.XYZEN_MASK) | mask)
-    writereg(core.CTRL_REG1, 1, @mask)
 
 
 PUB accel_bias(x, y, z)
@@ -320,12 +319,11 @@ PUB accel_data_rate(rate): curr_rate
         0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600:
             _accel_time_res := (1_000000 / rate)
             rate := lookdownz(rate: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600) << core.ODR
+            rate := ((curr_rate & core.ODR_MASK) | rate)
+            writereg(core.CTRL_REG1, 1, @rate)
         other:
             curr_rate := (curr_rate >> core.ODR) & core.ODR_BITS
             return lookupz(curr_rate: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600)
-
-    rate := ((curr_rate & core.ODR_MASK) | rate)
-    writereg(core.CTRL_REG1, 1, @rate)
 
 
 PUB accel_data_rdy(): flag
@@ -375,11 +373,10 @@ PUB accel_int_polarity(state): curr_state
     case state
         LOW, HIGH:
             state <<= core.INT_POL
+            state := ((curr_state & core.INT_POL_MASK) | state)
+            writereg(core.CTRL_REG6, 1, @state)
         other:
             return ((curr_state >> core.INT_POL) & 1)
-
-    state := ((curr_state & core.INT_POL_MASK) | state)
-    writereg(core.CTRL_REG6, 1, @state)
 
 
 PUB accel_int_set_mask(mask)
@@ -437,12 +434,11 @@ PUB accel_scale(scale): curr_scl
             scale := lookdownz(scale: 2, 4, 8, 16)
             _ares := lookupz(scale: 61, 122, 244, 732)
             scale <<= core.FS
+            scale := ((curr_scl & core.FS_MASK) | scale)
+            writereg(core.CTRL_REG4, 1, @scale)
         other:
             curr_scl := (curr_scl >> core.FS) & core.FS_BITS
             return lookupz(curr_scl: 2, 4, 8, 16)
-
-    scale := ((curr_scl & core.FS_MASK) | scale)
-    writereg(core.CTRL_REG4, 1, @scale)
 
 
 PUB accel_set_bias(x, y, z)
@@ -502,11 +498,10 @@ PUB click_int_ena(state): curr_state
     case ||(state)
         0, 1:
             state := ||(state) << core.I1_CLICK
+            state := ((curr_state & core.I1_CLICK_MASK) | state)
+            writereg(core.CTRL_REG3, 1, @state)
         other:
             return ((curr_state >> core.I1_CLICK) == 1)
-
-    state := ((curr_state & core.I1_CLICK_MASK) | state)
-    writereg(core.CTRL_REG3, 1, @state)
 
 
 PUB click_latency(): ltime
@@ -631,11 +626,10 @@ PUB fifo_ena(state): curr_state
     case ||(state)
         0, 1:
             state := (||(state) << core.FIFO_EN)
+            state := ((curr_state & core.FIFO_EN_MASK) | state)
+            writereg(core.CTRL_REG5, 1, @state)
         other:
             return (((curr_state >> core.FIFO_EN) & 1) == 1)
-
-    state := ((curr_state & core.FIFO_EN_MASK) | state)
-    writereg(core.CTRL_REG5, 1, @state)
 
 
 PUB fifo_empty(): flag
@@ -667,11 +661,10 @@ PUB fifo_mode(mode): curr_mode
     case mode
         BYPASS, FIFO, STREAM, STREAM2FIFO:
             mode <<= core.FM
+            mode := ((curr_mode & core.FM_MASK) | mode)
+            writereg(core.FIFO_CTRL_REG, 1, @mode)
         other:
             return ((curr_mode >> core.FM) & core.FM_BITS)
-
-    mode := ((curr_mode & core.FM_MASK) | mode)
-    writereg(core.FIFO_CTRL_REG, 1, @mode)
 
 
 PUB fifo_thresh(thresh): curr_thr
@@ -683,11 +676,10 @@ PUB fifo_thresh(thresh): curr_thr
     case thresh
         1..32:
             thresh -= 1
+            thresh := ((curr_thr & core.FTH_MASK) | thresh)
+            writereg(core.FIFO_CTRL_REG, 1, @thresh)
         other:
             return ((curr_thr & core.FTH) + 1)
-
-    thresh := ((curr_thr & core.FTH_MASK) | thresh)
-    writereg(core.FIFO_CTRL_REG, 1, @thresh)
 
 
 PUB fifo_nr_unread(): nr_smp
@@ -782,11 +774,10 @@ PUB int1_latch_ena(state): curr_state
     case ||(state)
         0, 1:
             state := ||(state) << core.LIR_INT1
+            state := ((curr_state & core.LIR_INT1_MASK) | state)
+            writereg(core.CTRL_REG5, 1, @state)
         other:
             return (((curr_state >> core.LIR_INT1) & 1) == 1)
-
-    state := ((curr_state & core.LIR_INT1_MASK) | state)
-    writereg(core.CTRL_REG5, 1, @state)
 
 
 PUB int1_mask(): mask
@@ -833,7 +824,7 @@ PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
             return
 
 #ifdef LIS3DH_SPI
-    reg_nr |= core.R
+    reg_nr |= core.READ_BIT
     outa[_CS] := 0
     spi.wr_byte(reg_nr)
     spi.rdblock_lsbf(ptr_buff, nr_bytes)
