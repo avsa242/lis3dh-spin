@@ -265,8 +265,7 @@ PUB accel_axis_ena(mask): curr_mask
     readreg(core.CTRL_REG1, 1, @curr_mask)
     case mask
         %000..%111:
-            mask := (mask >< 3) & core.XYZEN_BITS
-            mask := ((curr_mask & core.XYZEN_MASK) | mask)
+            mask := ( (curr_mask & core.XYZEN_MASK) | (mask >< 3) )
             writereg(core.CTRL_REG1, 1, @mask)
         other:
             return curr_mask & core.XYZEN_BITS
@@ -285,13 +284,9 @@ PUB accel_data(ptr_x, ptr_y, ptr_z) | tmp[2]
     longfill(@tmp, 0, 2)
     readreg(core.OUT_X_L, 6, @tmp)
 
-    long[ptr_x] := ~~tmp.word[X_AXIS]
-    long[ptr_y] := ~~tmp.word[Y_AXIS]
-    long[ptr_z] := ~~tmp.word[Z_AXIS]
-
-    long[ptr_x] -= _abias[X_AXIS]
-    long[ptr_y] -= _abias[Y_AXIS]
-    long[ptr_z] -= _abias[Z_AXIS]
+    long[ptr_x] := (~~tmp.word[X_AXIS]) - _abias[X_AXIS]
+    long[ptr_y] := (~~tmp.word[Y_AXIS]) - _abias[X_AXIS]
+    long[ptr_z] := (~~tmp.word[Z_AXIS]) - _abias[X_AXIS]
 
 
 PUB accel_data_overrun(): flag
@@ -309,7 +304,7 @@ PUB accel_data_overrun(): flag
 
 
 PUB accel_data_rate(rate): curr_rate
-' Set accelerometer output data rate, in rate
+' Set accelerometer output data rate, in Hz
 '   Valid values: See case table below
 '   Any other value polls the chip and returns the current setting
 '   NOTE: A value of 0 powers down the device
@@ -317,7 +312,8 @@ PUB accel_data_rate(rate): curr_rate
     readreg(core.CTRL_REG1, 1, @curr_rate)
     case rate
         0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600:
-            _accel_time_res := (1_000000 / rate)
+            _accel_time_res := (1_000000 / rate)' calc timescale needed for some other functions
+            { map rate in Hz to bitfield }
             rate := lookdownz(rate: 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600) << core.ODR
             rate := ((curr_rate & core.ODR_MASK) | rate)
             writereg(core.CTRL_REG1, 1, @rate)
@@ -433,8 +429,7 @@ PUB accel_scale(scale): curr_scl
         2, 4, 8, 16:
             scale := lookdownz(scale: 2, 4, 8, 16)
             _ares := lookupz(scale: 61, 122, 244, 732)
-            scale <<= core.FS
-            scale := ((curr_scl & core.FS_MASK) | scale)
+            scale := ((curr_scl & core.FS_MASK) | (scale << core.FS))
             writereg(core.CTRL_REG4, 1, @scale)
         other:
             curr_scl := (curr_scl >> core.FS) & core.FS_BITS
@@ -472,7 +467,7 @@ PUB clicked(): flag
 '   Returns: TRUE (-1) if sensor was single-clicked or double-clicked
 '            FALSE (0) otherwise
     flag := 0
-    return (((clicked_int() >> core.SCLICK) & %11) <> 0)
+    return ( (clicked_int() & core.CLICKED_BITS) <> 0 )
 
 
 PUB clicked_int(): status
@@ -497,8 +492,7 @@ PUB click_int_ena(state): curr_state
     readreg(core.CTRL_REG3, 1, @curr_state)
     case ||(state)
         0, 1:
-            state := ||(state) << core.I1_CLICK
-            state := ((curr_state & core.I1_CLICK_MASK) | state)
+            state := ((curr_state & core.I1_CLICK_MASK) | (||(state) << core.I1_CLICK) )
             writereg(core.CTRL_REG3, 1, @state)
         other:
             return ((curr_state >> core.I1_CLICK) == 1)
@@ -599,7 +593,7 @@ PUB dbl_click_win(): dctime
 
 
 PUB dbl_click_set_win(dctime)
-' Set maximum elapsed interval between two consecutive clicks, in uSec
+' Set maximum elapsed interval between two consecutive clicks, in microseconds
 '   Valid values:
 '       accel_data_rate()   Min time (uS/step size) Max time (uS)   (equiv. range in mS)
 '       1                   1_000_000               255_000_000     1,000 .. 255,000
@@ -611,8 +605,8 @@ PUB dbl_click_set_win(dctime)
 '       400                 2_500                   637_500           2.5 .. 637.5
 '       1344                744                     189_732         0.744 .. 189.732
 '       1600                625                     159_375         0.625 .. 159.375
-'   NOTE: Minimum unit is dependent on the current output data rate (AccelDataRate)
-'   NOTE: ST application note example uses AccelDataRate(400)
+'   NOTE: Minimum unit is dependent on the current output data rate set with accel_data_rate()
+'   NOTE: ST application note example uses 400
     dctime := ((0 #> dctime <# (_accel_time_res * 255)) / _accel_time_res)
     writereg(core.TIME_WINDOW, 1, @dctime)
 
@@ -625,8 +619,7 @@ PUB fifo_ena(state): curr_state
     readreg(core.CTRL_REG5, 1, @curr_state)
     case ||(state)
         0, 1:
-            state := (||(state) << core.FIFO_EN)
-            state := ((curr_state & core.FIFO_EN_MASK) | state)
+            state := ((curr_state & core.FIFO_EN_MASK) | (||(state) << core.FIFO_EN) )
             writereg(core.CTRL_REG5, 1, @state)
         other:
             return (((curr_state >> core.FIFO_EN) & 1) == 1)
@@ -660,8 +653,7 @@ PUB fifo_mode(mode): curr_mode
     readreg(core.FIFO_CTRL_REG, 1, @curr_mode)
     case mode
         BYPASS, FIFO, STREAM, STREAM2FIFO:
-            mode <<= core.FM
-            mode := ((curr_mode & core.FM_MASK) | mode)
+            mode := ((curr_mode & core.FM_MASK) | (mode << core.FM) )
             writereg(core.FIFO_CTRL_REG, 1, @mode)
         other:
             return ((curr_mode >> core.FM) & core.FM_BITS)
@@ -675,8 +667,7 @@ PUB fifo_thresh(thresh): curr_thr
     readreg(core.FIFO_CTRL_REG, 1, @curr_thr)
     case thresh
         1..32:
-            thresh -= 1
-            thresh := ((curr_thr & core.FTH_MASK) | thresh)
+            thresh := ((curr_thr & core.FTH_MASK) | (thresh-1) )
             writereg(core.FIFO_CTRL_REG, 1, @thresh)
         other:
             return ((curr_thr & core.FTH) + 1)
@@ -773,8 +764,7 @@ PUB int1_latch_ena(state): curr_state
     readreg(core.CTRL_REG5, 1, @curr_state)
     case ||(state)
         0, 1:
-            state := ||(state) << core.LIR_INT1
-            state := ((curr_state & core.LIR_INT1_MASK) | state)
+            state := ((curr_state & core.LIR_INT1_MASK) | (||(state) << core.LIR_INT1) )
             writereg(core.CTRL_REG5, 1, @state)
         other:
             return (((curr_state >> core.LIR_INT1) & 1) == 1)

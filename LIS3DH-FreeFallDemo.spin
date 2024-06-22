@@ -71,7 +71,7 @@ PUB main() | intsource
 
     repeat
         if (_intflag)                           ' interrupt triggered?
-            intsource := sensor.accel_int()      ' read & clear interrupt flags
+            intsource := sensor.accel_int()     ' read & clear interrupt flags
             if (intsource & %01_01_01)          ' free-fall event?
                 ser.pos_xy(0, 4)
                 ser.puts(@"Sensor in free-fall!")

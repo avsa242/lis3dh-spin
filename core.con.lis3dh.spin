@@ -208,6 +208,7 @@ CON
         CLICK_IA        = 6
         DCLICK          = 5
         SCLICK          = 4
+        CLICKED_BITS    = (%11 << SCLICK)
         SIGN            = 3
         Z               = 2
         Y               = 1
