@@ -5,7 +5,7 @@
         * 3DoF data output
     Author:         Jesse Burt
     Started:        Mar 15, 2020
-    Updated:        Jun 21, 2024
+    Updated:        Dec 14, 2024
     Copyright (c) 2024 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -25,19 +25,53 @@
 
 CON
 
-    _clkmode    = cfg._clkmode
-    _xinfreq    = cfg._xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     time:   "time"
     ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=0, ...
                                             {SPI} CS=0, SCK=1, MOSI=2, MISO=3, SPI_FREQ=1_000_000
 '   NOTE: If LIS3DH_SPI is #defined, and MOSI_PIN and MISO_PIN are the same,
 '   the driver will attempt to start in 3-wire SPI mode.
+
+
+PUB main() | a[3], axis, sign
+
+    setup()
+
+    sensor.preset_active()
+
+    repeat
+        ser.pos_xy(0, 3)
+        if ( ser.getchar_noblock() == "c" )
+            cal_accel()
+        repeat
+        until sensor.accel_data_rdy()
+        sensor.accel_g(@a[sensor.X_AXIS], @a[sensor.Y_AXIS], @a[sensor.Z_AXIS])
+        ser.str(@"Accel (g):  ")
+        repeat axis from sensor.X_AXIS to sensor.Z_AXIS
+            if ( a[axis] < 0 )
+                sign := "-"
+            else
+                sign := " "
+            ser.printf(@"%c%d.%06.6d     ", sign, ...
+                                            ||(a[axis] / 1_000_000), ...
+                                            ||(a[axis] // 1_000_000) )
+        ser.newline()
+
+
+PUB cal_accel()
+' Calibrate the accelerometer
+    ser.pos_xy(0, 3)
+    ser.str(@"Calibrating accelerometer...")
+    ser.clear_ln()
+    sensor.calibrate_accel()
+    ser.pos_xy(0, 3)
+    ser.clear_ln()
 
 
 PUB setup()
@@ -52,16 +86,6 @@ PUB setup()
     else
         ser.strln(@"LIS3DH driver failed to start - halting")
         repeat
-
-    sensor.preset_active()
-
-    repeat
-        ser.pos_xy(0, 3)
-        show_accel_data()
-        if ( ser.rx_check() == "c" )
-            cal_accel()
-
-#include "acceldemo.common.spinh"                 ' code common to all IMU demos
 
 
 DAT

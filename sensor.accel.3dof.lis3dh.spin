@@ -56,10 +56,6 @@ CON
     ' Constants used for I2C mode only
     SLAVE_WR        = core.SLAVE_ADDR
     SLAVE_RD        = core.SLAVE_ADDR|1
-
-    DEF_SCL         = 28
-    DEF_SDA         = 29
-    DEF_HZ          = 100_000
     I2C_MAX_FREQ    = core.I2C_MAX_FREQ
 
     ' Indicate to user apps how many Degrees of Freedom each sub-sensor has
@@ -77,9 +73,6 @@ CON
     CAL_XL_DR       = 400
     CAL_G_DR        = 0
     CAL_M_DR        = 0
-
-    R               = 0
-    W               = 1
 
 
 VAR
@@ -223,7 +216,7 @@ PUB preset_freefall()
     int1_set_mask(%01000000)
 
 
-PUB accel_adc_res(adc_res): curr_res | tmp1, tmp2
+PUB accel_adc_res(adc_res=-2): curr_res | tmp1, tmp2
 ' Set accelerometer ADC resolution, in bits
 '   Valid values:
 '       8:  8-bit data output, Low-power mode
@@ -255,7 +248,7 @@ PUB accel_adc_res(adc_res): curr_res | tmp1, tmp2
     writereg(core.CTRL_REG4, 1, @tmp2)
 
 
-PUB accel_axis_ena(mask): curr_mask
+PUB accel_axis_ena(mask=-2): curr_mask
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
@@ -303,7 +296,7 @@ PUB accel_data_overrun(): flag
     return ((flag >> core.X_OR) & %1111)
 
 
-PUB accel_data_rate(rate): curr_rate
+PUB accel_data_rate(rate=-2): curr_rate
 ' Set accelerometer output data rate, in Hz
 '   Valid values: See case table below
 '   Any other value polls the chip and returns the current setting
@@ -359,7 +352,7 @@ PUB accel_int_mask(): mask
     readreg(core.INT1_CFG, 1, @mask)
 
 
-PUB accel_int_polarity(state): curr_state
+PUB accel_int_polarity(state=-2): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (0), HIGH (1)
 '   Any other value polls the chip and returns the current setting
@@ -394,7 +387,7 @@ PUB accel_int_set_mask(mask)
 PUB accel_int_thresh(): thresh | scl_fact
 ' Get interrupt threshold
 '   Returns: micro-g's
-    case accel_scale(-2)
+    case accel_scale()
         2: scl_fact := 16_000
         4: scl_fact := 32_000
         8: scl_fact := 62_000
@@ -408,7 +401,7 @@ PUB accel_int_thresh(): thresh | scl_fact
 PUB accel_int_set_thresh(thresh) | scl_fact
 ' Set interrupt threshold, in micro-g's
 '   Valid values: 0..16_000000
-    case accel_scale(-2)
+    case accel_scale()
         2: scl_fact := 16_000
         4: scl_fact := 32_000
         8: scl_fact := 62_000
@@ -419,7 +412,7 @@ PUB accel_int_set_thresh(thresh) | scl_fact
     writereg(core.INT1_THS, 1, @thresh)
 
 
-PUB accel_scale(scale): curr_scl
+PUB accel_scale(scale=-2): curr_scl
 ' Set measurement range of the accelerometer, in g's
 '   Valid values: 2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
@@ -445,7 +438,7 @@ PUB accel_set_bias(x, y, z)
     _abias[Z_AXIS] := -32768 #> z <# 32767
 
 
-PUB click_axis_ena(mask): curr_mask
+PUB click_axis_ena(mask=-2): curr_mask
 ' Enable click detection per axis, and per click type
 '   Valid values:
 '       Bits: 5..0
@@ -484,7 +477,7 @@ PUB clicked_int(): status
     readreg(core.CLICK_SRC, 1, @status)
 
 
-PUB click_int_ena(state): curr_state
+PUB click_int_ena(state=-2): curr_state
 ' Enable click interrupts on INT1
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -529,7 +522,7 @@ PUB click_set_latency(ltime)
 PUB click_thresh(): thresh | ares
 ' Get threshold for recognizing a click
 '   Returns: micro-g's
-    ares := (accel_scale(-2) * 1_000000) / 128  ' res. = scale / 128
+    ares := (accel_scale() * 1_000000) / 128    ' res. = scale / 128
     thresh := 0
     readreg(core.CLICK_THS, 1, @thresh)
     return (thresh * ares)
@@ -544,7 +537,7 @@ PUB click_set_thresh(thresh) | ares
 '       8               7_937500 (= 7.937500g)
 '       16              15_875000 (= 15.875000g)
 '   NOTE: Each LSB = (accel_scale()/128) * 1M (e.g., 4g scale lsb=31250ug = 0_031250ug = 0.03125g)
-    ares := (accel_scale(-2) * 1_000000) / 128  ' res. = scale / 128
+    ares := (accel_scale() * 1_000000) / 128    ' res. = scale / 128
     thresh := ((0 #> thresh <# (127 * ares)) / ares)
     writereg(core.CLICK_THS, 1, @thresh)
 
@@ -611,7 +604,7 @@ PUB dbl_click_set_win(dctime)
     writereg(core.TIME_WINDOW, 1, @dctime)
 
 
-PUB fifo_ena(state): curr_state
+PUB fifo_ena(state=-2): curr_state
 ' Enable FIFO memory
 '   Valid values: FALSE (0), TRUE(1 or -1)
 '   Any other value polls the chip and returns the current setting
@@ -641,7 +634,7 @@ PUB fifo_full(): flag
     return (((flag >> core.OVRN_FIFO) & 1) == 1)
 
 
-PUB fifo_mode(mode): curr_mode
+PUB fifo_mode(mode=-2): curr_mode
 ' Set FIFO behavior
 '   Valid values:
 '       BYPASS      (%00) - Bypass mode - FIFO off
@@ -659,7 +652,7 @@ PUB fifo_mode(mode): curr_mode
             return ((curr_mode >> core.FM) & core.FM_BITS)
 
 
-PUB fifo_thresh(thresh): curr_thr
+PUB fifo_thresh(thresh=-2): curr_thr
 ' Set FIFO threshold level
 '   Valid values: 1..32
 '   Any other value polls the chip and returns the current setting
@@ -691,7 +684,6 @@ PUB freefall_axis_ena(mask): curr_mask
 '       2: Y-axis low event
 '       1: X-axis high event
 '       0: X-axis low event
-'   Any other value polls the chip and returns the current setting
     accel_int_set_mask(core.FFALL | mask)       ' set AOI bit for free-fall det
 
 
@@ -756,7 +748,7 @@ PUB int1_set_duration(dur)
     writereg(core.INT1_DUR, 1, @dur)
 
 
-PUB int1_latch_ena(state): curr_state
+PUB int1_latch_ena(state=-2): curr_state
 ' Latch interrupts on INT1 pin
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting

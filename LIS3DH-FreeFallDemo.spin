@@ -5,7 +5,7 @@
         * Free-fall detection functionality
     Author:         Jesse Burt
     Started:        Dec 22, 2021
-    Updated:        Jun 21, 2024
+    Updated:        Dec 14, 2024
     Copyright (c) 2024 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -25,18 +25,17 @@
 
 CON
 
-    _clkmode    = cfg._clkmode
-    _xinfreq    = cfg._xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 ' -- User-modifiable constants
-    LED1        = cfg.LED1
-    INT1        = 24
+    LED1        = 26
+    INT1_PIN    = 24
 ' --
 
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     time:   "time"
     ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     sensor: "sensor.accel.3dof.lis3dh" |    {I2C} SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=0, ...
@@ -99,15 +98,15 @@ PUB calibrate()
 
 PRI cog_isr()
 ' Interrupt service routine
-    dira[INT1] := 0                             ' INT1 as input
+    dira[INT1_PIN] := 0                         ' INT1_PIN as input
     dira[LED1] := 1                             ' LED as output
 
     repeat
-        waitpeq(|< INT1, |< INT1, 0)            ' wait for INT1 (active high)
+        waitpeq(|< INT1_PIN, |< INT1_PIN, 0)    ' wait for INT1_PIN (active high)
         outa[LED1] := 1                         ' light LED
         _intflag := 1                           '   set flag
 
-        waitpne(|< INT1, |< INT1, 0)            ' now wait for it to clear
+        waitpne(|< INT1_PIN, |< INT1_PIN, 0)    ' now wait for it to clear
         outa[LED1] := 0                         ' turn off LED
         _intflag := 0                           '   clear flag
 
@@ -118,13 +117,14 @@ PUB setup()
     time.msleep(30)
     ser.clear()
     ser.strln(@"Serial terminal started")
+
     if ( sensor.start() )
         ser.strln(@"LIS3DH driver started")
     else
         ser.strln(@"LIS3DH driver failed to start - halting")
         repeat
 
-    cognew(cog_isr(), @_isr_stack)                  ' start ISR in another core
+    cognew(cog_isr(), @_isr_stack)              ' start ISR in another core
 
 
 

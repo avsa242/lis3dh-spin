@@ -5,7 +5,7 @@
         * click-detection functionality
     Author:         Jesse Burt
     Started:        Jul 11, 2020
-    Updated:        Jun 21, 2024
+    Updated:        Dec 14, 2024
     Copyright (c) 2024 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -18,8 +18,8 @@
 
 CON
 
-    _clkfreq    = cfg._clkfreq_def
-    _xtlfreq    = cfg._xtlfreq
+    _clkfreq    = 180_000_000
+    _xtlfreq    = 20_000_000
 
 ' -- User-modifiable constants
     CLICK_BASE  = 0
@@ -28,7 +28,6 @@ CON
 
 OBJ
 
-    cfg:    "boardcfg.p2eval"
     ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
 
     { for MikroE click boards - modify CLICK_BASE symbol above only }
@@ -86,6 +85,7 @@ PUB setup()
 
     ser.clear()
     ser.strln(@"Serial terminal started")
+
     if ( sensor.start() )
         ser.strln(@"LIS3DH driver started")
     else
