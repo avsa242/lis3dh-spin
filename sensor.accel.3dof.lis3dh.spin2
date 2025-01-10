@@ -4,8 +4,8 @@
     Description:    Driver for the ST LIS3DH 3DoF accelerometer
     Author:         Jesse Burt
     Started:        Mar 15, 2020
-    Updated:        Jun 22, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 10, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -664,14 +664,28 @@ PUB freefall_set_time(fftime)
     int1_set_duration(fftime)
 
 
+PUB int_polarity(p): cp
+' Set INT1/INT2 polarity/active state
+'   p:
+'       ACTIVE_HIGH (0):    active-high on interrupt
+'       ACTIVE_LOW (1):     active-low on interrupt
+    cp := readreg(core.CTRL_REG6)
+    case p
+        ACTIVE_HIGH, ACTIVE_LOW:
+            p := (cp & core.INT_POL_MASK) | (p << core.INT_POL)
+            writereg(core.CTRL_REG6, p)
+        other:
+            return (cp >> core.INT_POL) & 1
+
+
 PUB int1_duration(): d
-' Get duration a condition must be verified in order to assert an interrupt
+' Get currently set duration a condition must be true in order to assert an interrupt
     ' read and convert to usec
     return (readreg(core.INT1_DUR) * _accel_time_res)
 
 
 PUB int1_set_duration(dur)
-' Set duration a condition must be verified in order to assert an interrupt
+' Set duration a condition must be true in order to assert an interrupt
 '   Valid values:
 '       accel_data_rate()   Step        Max
 '           1               1_000_000   127_000_000
@@ -726,6 +740,70 @@ PUB int1_set_mask(mask)
 '       1: FIFO overrun
 '       0: -- unused/ignored --
     writereg(core.CTRL_REG3, (mask & core.CTRL_REG3_MASK) )
+
+
+PUB int2_duration(): d
+' Get currently set duration a condition must be true in order to assert an interrupt
+    ' read and convert to usec
+    return (readreg(core.INT2_DUR) * _accel_time_res)
+
+
+PUB int2_set_duration(dur)
+' Set duration a condition must be true in order to assert an interrupt
+'   Valid values:
+'       accel_data_rate()   Step        Max
+'           1               1_000_000   127_000_000
+'           10              100_000     12_700_000
+'           25              40_000      5_080_000
+'           50              20_000      2_540_000
+'           100             10_000      1_270_000
+'           200             5_000       635_000
+'           400             2_500       317_500
+'           1600            625         79_375
+'           1344            744         94_494
+'           5376            186         23_623
+'   Any other value polls the chip and returns the current setting
+    writereg(core.INT2_DUR, ( (0 #> dur <# (_accel_time_res * 127)) / _accel_time_res) )
+
+
+PUB int2_latch_ena(state=-2): c
+' Latch interrupts on INT2 pin
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    c := readreg(core.CTRL_REG5)
+    case abs(state)
+        0, 1:
+            writereg(core.CTRL_REG5, ((c & core.LIR_INT2_MASK) | (abs(state) << core.LIR_INT2) ) )
+        other:
+            return ( ( (c >> core.LIR_INT2) & 1) == 1)
+
+
+PUB int2_mask(): m
+' Get INT2 mask
+'   Bit 7654321 (0 disables an interrupt, 1 enables)
+'       7: Click
+'       6: IA1
+'       5: IA2
+'       4: XYZ Data available
+'       3: 321 Data available
+'       2: FIFO watermark
+'       1: FIFO overrun
+'       0: -- unused/ignored --
+    return readreg(core.CTRL_REG6)
+
+
+PUB int2_set_mask(mask)
+' Set INT2 mask
+'   Bit 7654321 (0 disables an interrupt, 1 enables)
+'       7: Click
+'       6: IA1
+'       5: IA2
+'       4: Boot
+'       3: Activity
+'       2: unused/ignored
+'       1: unused/ignored
+'       0: unused/ignored
+    writereg(core.CTRL_REG6, (mask & core.CTRL_REG6_INTMASK) )
 
 
 PRI readreg(reg_nr): v | byte cmd_pkt[2]
@@ -788,7 +866,7 @@ PRI writereg(reg_nr, val) | byte cmd_pkt[2]
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

@@ -4,8 +4,8 @@
     Description:    LIS3DH-specific constants
     Author:         Jesse Burt
     Started:        Mar 15, 2020
-    Updated:        Jun 22, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jan 10, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -106,6 +106,7 @@ CON
 
     CTRL_REG6           = $25
     CTRL_REG6_MASK      = $FA
+    CTRL_REG6_INTMASK   = $F8
         I2_CLICK        = 7
         I2_IA1          = 6
         I2_IA2          = 5
@@ -227,7 +228,7 @@ PUB null()
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
