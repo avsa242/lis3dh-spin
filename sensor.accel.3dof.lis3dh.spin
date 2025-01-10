@@ -269,7 +269,7 @@ PUB accel_bias(x, y, z)
     long[z] := _abias[Z_AXIS]
 
 
-PUB accel_data(ptr_x, ptr_y, ptr_z) | byte cmd_pkt[2], tmp[2]
+PUB accel_data(ptr_x, ptr_y, ptr_z) | cmd_pkt, tmp[2]
 ' Read the accelerometer output registers
 #ifdef LIS3DH_SPI
     outa[_CS] := 0
@@ -277,8 +277,8 @@ PUB accel_data(ptr_x, ptr_y, ptr_z) | byte cmd_pkt[2], tmp[2]
         spi.rdblock_lsbf(@tmp, 6)
     outa[_CS] := 1
 #elseifdef LIS3DH_I2C
-    cmd_pkt[0] := (SLAVE_WR | _addr_bits)
-    cmd_pkt[1] := core.OUT_X_L | core.MS_I2C
+    cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
+    cmd_pkt.byte[1] := core.OUT_X_L | core.MS_I2C
 
     tmp[0] := tmp[1] := 0
     i2c.start()                                 ' S
@@ -828,7 +828,7 @@ PUB int2_set_mask(mask)
     writereg(core.CTRL_REG6, (mask & core.CTRL_REG6_INTMASK) )
 
 
-PRI readreg(reg_nr): v | byte cmd_pkt[2]
+PRI readreg(reg_nr): v | cmd_pkt
 ' Read nr_bytes from slave device into ptr_buff
     case reg_nr
         $07..$0D, $0F, $1E..$27, $2E..$3F:
@@ -843,8 +843,8 @@ PRI readreg(reg_nr): v | byte cmd_pkt[2]
         spi.rdblock_lsbf(@v, 1)
     outa[_CS] := 1
 #elseifdef LIS3DH_I2C
-    cmd_pkt[0] := (SLAVE_WR | _addr_bits)
-    cmd_pkt[1] := reg_nr
+    cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
+    cmd_pkt.byte[1] := reg_nr
 
     i2c.start()                                 ' S
     i2c.wrblock_lsbf(@cmd_pkt, 2)               ' W [SL|W] [REG]
@@ -864,7 +864,7 @@ PRI spi_mode(mode) | tmp
     writereg(core.CTRL_REG4, tmp)
 
 
-PRI writereg(reg_nr, val) | byte cmd_pkt[2]
+PRI writereg(reg_nr, val) | cmd_pkt
 ' Write nr_bytes from ptr_buff to slave device
     case reg_nr
         $1E..$26, $2E, $30, $32..$34, $36..$38, $3A..$3F:
@@ -876,8 +876,8 @@ PRI writereg(reg_nr, val) | byte cmd_pkt[2]
         spi.wrblock_lsbf(@val, 1)
     outa[_CS] := 1
 #elseifdef LIS3DH_I2C
-    cmd_pkt[0] := (SLAVE_WR | _addr_bits)
-    cmd_pkt[1] := reg_nr
+    cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
+    cmd_pkt.byte[1] := reg_nr
 
     i2c.start()
     i2c.wrblock_lsbf(@cmd_pkt, 2)
